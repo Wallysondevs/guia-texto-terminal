@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scripts awk em arquivo (-f), -v e funções | Guia Texto no Terminal</title>
+<meta name="description" content="Programas awk em arquivo com -f, scripts executáveis com #!/usr/bin/awk -f, -v com scripts e funções definidas pelo usuário.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Scripts awk (<span class="hl">-f</span>), -v e funções</h1>
+
+<p class="intro">Quando o programa cresce, ele vai para um arquivo <code>.awk</code>. Esta aula mostra como rodar, como tornar executável, como parametrizar e como criar funções.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Rodar um arquivo com <code>-f</code>.</li>
+<li>Script executável com <code>#!/usr/bin/awk -f</code>.</li>
+<li>Parâmetros com <code>-v</code> e funções com <code>function</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: programas awk em arquivo</h2>
+<p>Quando o programa passa de uma linha, fica ruim de digitar entre aspas. Coloque-o num arquivo <code>.awk</code> e rode com <code>-f</code>. Dentro do arquivo não precisa de aspas simples, dá para quebrar linhas, indentar e comentar com <code>#</code>.</p>
+<hr>
+<h2>1. <code>-f</code>: rodar um arquivo</h2>
+<p>O <code>relatorio.awk</code> dos exemplos calcula o faturamento por vendedor:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cat relatorio.awk
+# relatorio.awk: total vendido por vendedor (vendas.csv)
+BEGIN { FS = &quot;,&quot; }
+NR &gt; 1 { total[$2] += $4 * $5 }
+END {
+    for (v in total)
+        printf &quot;%-8s R$ %8.2f\n&quot;, v, total[v]
+}
+$ awk -f relatorio.awk vendas.csv | sort
+Ana      R$   277.30
+Bruno    R$   169.90
+Carla    R$   209.90
+Diego    R$    65.00
+$</pre>
+<dl class="anatomy"><dt>awk</dt><dd>o programa.</dd><dt>-f relatorio.awk</dt><dd>lê o programa awk do arquivo.</dd><dt>vendas.csv</dt><dd>o arquivo de dados.</dd></dl>
+<hr>
+<h2>2. Script executável</h2>
+<p>Com a primeira linha <code>#!/usr/bin/awk -f</code> e permissão de execução, o arquivo vira um comando. Na coleta, o script foi criado com <code>printf</code> para caber numa linha:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ printf '#!/usr/bin/awk -f\n{ print NR &quot;: &quot; $1 }\n' &gt; numera.awk
+$ chmod +x numera.awk
+$ ./numera.awk notas.txt
+1: Ana
+2: Bruno
+3: Carla
+4: Diego
+5: Eduarda
+$</pre>
+<hr>
+<h2>3. <code>-v</code> com <code>-f</code></h2>
+<p>O <code>-v</code> passa valores para o script, que fica reaproveitável: o mesmo filtro para níveis diferentes:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ printf '$3 == nivel { print $2, $4 }\n' &gt; filtra.awk
+$ awk -v nivel=ERRO -f filtra.awk log.txt
+08:17:45 falha
+09:12:03 tempo
+10:45:20 falha
+$ awk -v nivel=AVISO -f filtra.awk log.txt
+09:01:37 estoque
+11:02:15 disco
+$</pre>
+<hr>
+<h2>4. Funções</h2>
+<p>No awk você pode criar funções com <code>function nome(parâmetros) { ... }</code>. Aqui, uma que formata dinheiro:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, 'function reais(v) {return sprintf(&quot;R$ %.2f&quot;, v)} NR &gt; 1 {print $3, reais($4 * $5)}' vendas.csv | head -3
+caderno R$ 37.50
+caneta R$ 20.00
+mochila R$ 89.90
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Script que não existe</strong>
+<p>O <code>-f</code> precisa de um arquivo que exista:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -f nada.awk notas.txt
+awk: fatal: não foi possível abrir arquivo-fonte &quot;nada.awk&quot; para leitura: Arquivo ou diretório inexistente
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>awk -f prog.awk arq</code></td><td>roda o programa do arquivo.</td></tr>
+<tr><td><code>#!/usr/bin/awk -f</code></td><td>1ª linha do script executável.</td></tr>
+<tr><td><code>awk -v x=1 -f prog.awk arq</code></td><td>passa x para o script.</td></tr>
+<tr><td><code>function f(a) {return a*2}</code></td><td>cria uma função.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Ler de arquivo</h3><p>Qual opção lê o programa de um arquivo?</p><div class="ex-code">awk <input data-answer="-f" aria-label="opção"> relatorio.awk vendas.csv</div></div><div class="exercise"><h3>2. A primeira linha</h3><p>Complete a primeira linha de um script awk executável:</p><div class="ex-code">#!/usr/bin/awk <input data-answer="-f" aria-label="resposta"></div></div><div class="mc" data-answer="2"><p class="mc-q">3. Dentro de um arquivo <code>.awk</code>, o programa:</p>
+<label><input type="radio" name="q3"> precisa de aspas simples</label>
+<label><input type="radio" name="q3"> não precisa de aspas e pode ter várias linhas</label>
+<label><input type="radio" name="q3"> só pode ter uma linha</label>
+<label><input type="radio" name="q3"> precisa começar com BEGIN</label></div><div class="mc" data-answer="2"><p class="mc-q">4. Como se cria uma função no awk?</p>
+<label><input type="radio" name="q4"> <code>def f(x):</code></label>
+<label><input type="radio" name="q4"> <code>function f(x) { ... }</code></label>
+<label><input type="radio" name="q4"> <code>func f</code></label>
+<label><input type="radio" name="q4"> <code>sub f</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:-f relatorio\.awk;;outre:^Ana\s+R\$\s+277\.30$;;outre:^Diego\s+R\$\s+65\.00$">
+<p class="try-task"><strong>Missão:</strong> rode o <code>relatorio.awk</code> no <code>vendas.csv</code> e ordene o resultado com <code>sort</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk -f relatorio.awk vendas.csv | sort
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Ana      R$   277.30
+Bruno    R$   169.90
+Carla    R$   209.90
+Diego    R$    65.00
+</pre>
+</div><div class="trycmd" data-goal="src:-v limite=7;;outre:^Ana$;;outre:^Carla$">
+<p class="try-task"><strong>Missão:</strong> use o <code>-v</code> para filtrar as linhas de <code>notas.txt</code> cuja nota 1 é maior que um <code>limite</code> de 7, mostrando só o nome.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk -v limite=7 '$2 &gt; limite {print $1}' notas.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Ana
+Carla
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>Arquivo <code>.awk</code>: sem aspas, com comentários e várias linhas.</li>
+<li><code>-v</code> deixa o script reaproveitável.</li>
+<li><code>function</code> cria funções suas.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

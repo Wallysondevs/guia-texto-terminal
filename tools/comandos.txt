@@ -522,3 +522,316 @@ sed 'y/çã/ca/' frutas.txt
 ### hold-m2
 sed -n '1!G; h; $p' nomes.txt
 
+### awki-basico
+awk '{print $1}' notas.txt
+
+### awki-0
+awk '{print $0}' nomes.txt | head -3
+awk '{print}' frutas.txt | head -2
+
+### awki-padrao
+awk '/ERRO/' log.txt
+
+### awki-juntos
+awk '/ERRO/ {print $2, $NF}' log.txt
+
+### awki-erro
+awk '{print $1' notas.txt
+
+### awki-erro2
+awk "{print $1}" notas.txt | head -2
+
+### awki-m1
+awk '{print $1}' notas.txt
+
+### awki-m2
+awk '/AVISO/ {print $2}' log.txt
+
+### campos-espacos
+awk '{print $3}' log.txt | head -4
+awk '{print $1, $3}' notas.txt
+
+### campos-nf
+awk '{print NF, $NF}' texto.txt
+awk '{print $(NF-1)}' acesso.log | head -3
+
+### campos-F
+awk -F, '{print $2, $3}' vendas.csv | head -3
+awk -F';' '{print $1}' contatos.txt
+
+### campos-regex
+awk -F'[;@]' '{print $1, $NF}' contatos.txt
+
+### campos-erro
+awk '{print $(NF-5)}' notas.txt
+
+### campos-erro2
+awk '{print $2}' vendas.csv | head -3
+
+### campos-m1
+awk -F, '{print $2, $3}' vendas.csv
+
+### campos-m2
+awk '{print $NF}' log.txt
+
+### printf-print
+awk '{print $1, $2}' notas.txt | head -2
+awk '{print $1 $2}' notas.txt | head -2
+awk '{print "Aluno:", $1, "- nota 1:", $2}' notas.txt | head -2
+
+### printf-molde
+awk '{printf "%s tirou %.1f na prova 3\n", $1, $4}' notas.txt
+
+### printf-largura
+awk -F, 'NR > 1 {printf "%-8s %-8s %3d x %6.2f\n", $2, $3, $4, $5}' vendas.csv | head -5
+
+### printf-int
+awk 'BEGIN {printf "%d %.0f %.2f %5.1f|\n", 7.8, 7.8, 7.8, 7.8}'
+
+### printf-erro
+awk '{printf "%s %s %s\n", $1}' notas.txt
+
+### printf-erro2
+awk '{printf "%s ", $1}' notas.txt
+
+### printf-m1
+awk '{printf "%s: %.2f\n", $1, $2}' notas.txt
+
+### printf-m2
+awk -F, 'NR > 1 {printf "%s R$ %.2f\n", $3, $5}' vendas.csv
+
+### pad-comp
+awk '$3 == "ERRO"' log.txt
+awk '$2 >= 8' notas.txt
+awk -F, '$4 > 5 {print $2, $3, $4}' vendas.csv
+
+### pad-regex
+awk '$3 ~ /ERRO|AVISO/ {print $2, $3}' log.txt
+awk '$1 !~ /^192\.168\.0\.12$/ {print $1, $9}' acesso.log | head -3
+
+### pad-logica
+awk '$2 >= 7 && $4 >= 7' notas.txt
+awk -F, '$3 == "mochila" || $4 >= 10 {print $2, $3, $4}' vendas.csv
+
+### pad-faixa
+awk 'NR == 1' vendas.csv
+awk 'NR == 2, NR == 4' notas.txt
+awk '/ERRO/, /AVISO/ {print NR": "$3}' log.txt
+
+### pad-erro
+awk '$3 == ERRO' log.txt; echo "código: $?"
+
+### pad-erro2
+awk '$3 = "ERRO"' log.txt | head -3
+
+### pad-m1
+awk '$2 < 7' notas.txt
+
+### pad-m2
+awk '$9 == 500 {print $1, $7}' acesso.log
+
+### be-titulo
+awk 'BEGIN {print "== Notas =="} {print $1} END {print "== fim =="}' notas.txt
+
+### be-contar
+awk 'END {print NR, "linhas"}' log.txt
+awk '/ERRO/ {n++} END {print n, "erros"}' log.txt
+
+### be-calc
+awk 'BEGIN {print 2 + 3 * 4}'
+awk 'BEGIN {printf "%.2f\n", 10 / 3}'
+awk 'BEGIN {print 2 ^ 10}'
+
+### be-ultima
+awk 'END {print "última:", $0}' vendas.csv
+
+### be-erro
+awk 'BEGIN' notas.txt
+
+### be-m1
+awk '/INFO/ {n++} END {print n, "infos"}' log.txt
+
+### be-m2
+awk -F, 'BEGIN {print "Vendas:"} NR > 1 {print $3} END {print "Total de linhas:", NR}' vendas.csv
+
+### avar-nr
+awk '{print NR ": " $0}' frutas.txt | head -3
+awk '{print NF " palavras: " $0}' texto.txt
+
+### avar-fs
+awk 'BEGIN {FS = ","; OFS = " | "} {print $2, $3, $4}' vendas.csv | head -3
+
+### avar-truque
+awk 'BEGIN {FS = ","; OFS = ";"} {$1 = $1} 1' vendas.csv | head -3
+head -1 log.txt | awk '{$1 = $1; print}'
+
+### avar-fnr
+awk '{print FILENAME, NR, FNR}' frutas.txt notas.txt | sed -n '6,9p'
+
+### avar-v
+awk -v minimo=8 '$2 >= minimo {print $1}' notas.txt
+awk -v nivel=AVISO '$3 == nivel {print $2}' log.txt
+
+### avar-erro
+awk -v minimo '$2 >= minimo' notas.txt 2>&1 | head -3
+
+### avar-m1
+awk '{print NR ") " $0}' nomes.txt
+
+### avar-m2
+awk 'BEGIN {FS = ","; OFS = "\t"} {$1 = $1} 1' vendas.csv
+
+### contas-soma
+awk -F, 'NR > 1 {total += $4} END {print "itens vendidos:", total}' vendas.csv
+
+### contas-fat
+awk -F, 'NR > 1 {fat += $4 * $5} END {printf "faturamento: R$ %.2f\n", fat}' vendas.csv
+
+### contas-media
+awk '{printf "%-8s %.2f\n", $1, ($2 + $3 + $4) / 3}' notas.txt
+awk '{soma += $2} END {printf "média da prova 1: %.2f\n", soma / NR}' notas.txt
+
+### contas-max
+awk -F, 'NR > 1 && $4 > max {max = $4; quem = $2} END {print "maior quantidade:", max, "(" quem ")"}' vendas.csv
+
+### contas-conv
+awk 'BEGIN {print "85%" + 0, "abc" + 0, "3.5kg" * 2}'
+
+### contas-erro
+awk '$3 == "FATAL" {n++; s += NF} END {print s / n}' log.txt
+
+### contas-m1
+awk -F, '$3 == "caneta" {t += $4} END {print t}' vendas.csv
+
+### contas-m2
+awk '{printf "%s %.1f\n", $1, ($2 + $3 + $4) / 3}' notas.txt
+
+### arr-contar
+awk '{n[$3]++} END {for (k in n) print k, n[k]}' log.txt
+
+### arr-somar
+awk -F, 'NR > 1 {fat[$2] += $4 * $5} END {for (v in fat) printf "%s %.2f\n", v, fat[v]}' vendas.csv | sort -k2 -rn
+
+### arr-ips
+awk '{n[$1]++} END {for (ip in n) print n[ip], ip}' acesso.log | sort -rn
+
+### arr-procinfo
+awk '{n[$3]++} END {PROCINFO["sorted_in"] = "@ind_str_asc"; for (k in n) print k, n[k]}' log.txt
+awk -F, 'NR > 1 {q[$3] += $4} END {PROCINFO["sorted_in"] = "@val_num_desc"; for (p in q) print p, q[p]}' vendas.csv
+
+### arr-visto
+awk '!visto[$0]++' frutas.txt
+awk -F, 'NR > 1 {v[$2]} END {print ("Diego" in v), ("Zeca" in v)}' vendas.csv
+
+### arr-erro
+awk '{n[$3]++} END {print n}' log.txt
+
+### arr-m1
+awk -F, 'NR > 1 {n[$2]++} END {for (v in n) print v, n[v]}' vendas.csv | sort
+
+### arr-m2
+awk -F, 'NR > 1 {q[$3] += $4} END {for (p in q) print p, q[p]}' vendas.csv | sort
+
+### str-len
+awk '{print length($0), $0}' nomes.txt | head -5
+awk '{print substr($1, 1, 3)}' notas.txt
+awk '{print toupper($0)}' frutas.txt | head -2
+
+### str-split
+awk -F, 'NR == 2 {n = split($1, d, "-"); print n, "pedaços:", d[3] "/" d[2] "/" d[1]}' vendas.csv
+awk '{print index($0, "@"), $0}' contatos.txt | head -2
+
+### str-gsub
+awk '{gsub(/rato/, "gato"); print}' texto.txt
+awk -F';' '{sub(/@.*/, "", $3); print $1 " -> " $3}' contatos.txt
+
+### str-capital
+awk '{print toupper(substr($0, 1, 1)) substr($0, 2)}' nomes.txt
+
+### str-erro
+awk '{print substr($1)}' notas.txt
+
+### str-m1
+awk '{print toupper($0)}' frutas.txt
+
+### str-m2
+awk '{gsub(/-/, "/"); print}' vendas.csv
+
+### ctrl-if
+awk '{m = ($2 + $3 + $4) / 3; if (m >= 7) print $1, "aprovado"; else print $1, "reprovado"}' notas.txt
+
+### ctrl-ternario
+awk '{m = ($2 + $3 + $4) / 3; printf "%-8s %4.1f %s\n", $1, m, (m >= 7 ? "ok" : "recuperação")}' notas.txt
+
+### ctrl-for
+awk '{max = $2; for (i = 3; i <= NF; i++) if ($i > max) max = $i; print $1, max}' notas.txt
+
+### ctrl-while
+awk 'BEGIN {i = 1; while (i <= 5) {printf "%d ", i * i; i++}; print ""}'
+
+### ctrl-next
+awk '/^#/ || /^$/ {next} {print "config:", $0}' config.txt
+awk '$3 == "ERRO" {print "primeiro erro na linha", NR; exit}' log.txt
+
+### ctrl-erro
+awk '{if $2 > 7 print $1}' notas.txt
+
+### ctrl-m1
+awk '{if ($4 >= 7) print $1, "passou"; else print $1, "ficou"}' notas.txt
+
+### ctrl-m2
+awk '{s = 0; for (i = 2; i <= NF; i++) s += $i; print $1, s}' notas.txt
+
+### scr-f
+cat relatorio.awk
+awk -f relatorio.awk vendas.csv | sort
+
+### scr-exec
+printf '#!/usr/bin/awk -f\n{ print NR ": " $1 }\n' > numera.awk
+chmod +x numera.awk
+./numera.awk notas.txt
+
+### scr-v
+printf '$3 == nivel { print $2, $4 }\n' > filtra.awk
+awk -v nivel=ERRO -f filtra.awk log.txt
+awk -v nivel=AVISO -f filtra.awk log.txt
+
+### scr-funcao
+awk -F, 'function reais(v) {return sprintf("R$ %.2f", v)} NR > 1 {print $3, reais($4 * $5)}' vendas.csv | head -3
+
+### scr-erro
+awk -f nada.awk notas.txt
+
+### scr-m1
+awk -f relatorio.awk vendas.csv | sort
+
+### scr-m2
+awk -v limite=7 '$2 > limite {print $1}' notas.txt
+
+### csv-roteiro
+awk -F, 'BEGIN {OFS = ","} NR == 1 {print $1, $3, "total"; next} $2 == "Ana" {print $1, $3, $4 * $5}' vendas.csv
+
+### csv-nomes
+awk -F, 'NR == 1 {for (i = 1; i <= NF; i++) col[$i] = i; next} {print $col["produto"], $col["preco"]}' vendas.csv | head -3
+
+### csv-problema
+echo '7,"Souza, Ana",28' | awk -F, '{print $2}'
+
+### csv-fpat
+echo '7,"Souza, Ana",28' | awk -v FPAT='([^,]*)|("[^"]*")' '{print $2; print NF, "campos"}'
+
+### csv-mawk
+echo '7,"Souza, Ana",28' | mawk -v FPAT='([^,]*)|("[^"]*")' '{print $2}'
+
+### csv-tabela
+awk -F, '{printf "%-11s %-9s %-8s %10s %6s\n", $1, $2, $3, $4, $5}' vendas.csv | head -5
+
+### csv-erro
+printf '7,Ana,28\r\n' | awk -F, '{print ($3 == "28") ? "igual" : "diferente"}'
+
+### csv-m1
+awk -F, 'BEGIN {OFS = ","; print "vendedor,total"} $3 == "mochila" {print $2, $4 * $5}' vendas.csv
+
+### csv-m2
+echo '9,"Lima, Bruno",35' | awk -v FPAT='([^,]*)|("[^"]*")' '{print $2}'
+

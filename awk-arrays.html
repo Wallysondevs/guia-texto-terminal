@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arrays associativos no awk: contar e somar por chave | Guia Texto no Terminal</title>
+<meta name="description" content="Arrays associativos no awk: contar e somar por chave, for in, ordenar com sort ou PROCINFO sorted_in (gawk), in, delete e !visto[$0]++.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Arrays <span class="hl">associativos</span></h1>
+
+<p class="intro">Um array associativo tem uma gaveta para cada etiqueta. É assim que o awk faz soma por vendedor e contagem por IP, a tabela dinâmica do terminal.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Contar e somar por chave.</li>
+<li>Percorrer com <code>for (k in a)</code> e ordenar.</li>
+<li><code>in</code>, <code>delete</code> e o truque <code>!visto[$0]++</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: uma gaveta para cada nome</h2>
+<p>Um <strong>array associativo</strong> é um conjunto de gavetas com etiqueta. Em vez de <code>total</code>, você usa <code>total["Ana"]</code>, <code>total["Bruno"]</code>… e a etiqueta pode vir de um campo: <code>total[$2] += $4</code>. É o jeito do awk de fazer “soma por vendedor”, “conta por IP”, a tabela dinâmica da planilha.</p>
+<hr>
+<h2>1. Contar por chave</h2>
+<p><code>n[$3]++</code> soma 1 na gaveta do nível de cada linha. No <code>END</code>, o <code>for (k in n)</code> passa por todas as gavetas:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{n[$3]++} END {for (k in n) print k, n[k]}' log.txt
+ERRO 3
+INFO 5
+AVISO 2
+$</pre>
+<dl class="anatomy"><dt>n[$3]++</dt><dd>soma 1 na gaveta com o nome do campo 3.</dd><dt>for (k in n)</dt><dd>passa por cada etiqueta do array.</dd><dt>print k, n[k]</dt><dd>a etiqueta e o valor da gaveta.</dd></dl>
+<div class="warning"><strong>A ordem do <code>for in</code> não é garantida</strong><p>O awk não promete ordem nenhuma ao percorrer o array. Para ordenar, mande para o <code>sort</code>, como abaixo, ou use o recurso do gawk da seção 4.</p></div>
+<hr>
+<h2>2. Somar por chave</h2>
+<p>Faturamento por vendedor, ordenado do maior para o menor com o <code>sort</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, 'NR &gt; 1 {fat[$2] += $4 * $5} END {for (v in fat) printf &quot;%s %.2f\n&quot;, v, fat[v]}' vendas.csv | sort -k2 -rn
+Ana 277.30
+Carla 209.90
+Bruno 169.90
+Diego 65.00
+$</pre>
+<hr>
+<h2>3. Contar IPs no log do servidor</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{n[$1]++} END {for (ip in n) print n[ip], ip}' acesso.log | sort -rn
+4 192.168.0.12
+3 192.168.0.20
+3 192.168.0.15
+2 192.168.0.33
+$</pre>
+<hr>
+<h2>4. Ordem no próprio gawk: <code>PROCINFO["sorted_in"]</code></h2>
+<p>Só no gawk: definir <code>PROCINFO["sorted_in"]</code> escolhe a ordem do <code>for in</code>. <code>"@ind_str_asc"</code> é etiqueta em ordem alfabética; <code>"@val_num_desc"</code>, valor numérico do maior para o menor:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{n[$3]++} END {PROCINFO[&quot;sorted_in&quot;] = &quot;@ind_str_asc&quot;; for (k in n) print k, n[k]}' log.txt
+AVISO 2
+ERRO 3
+INFO 5
+$ awk -F, 'NR &gt; 1 {q[$3] += $4} END {PROCINFO[&quot;sorted_in&quot;] = &quot;@val_num_desc&quot;; for (p in q) print p, q[p]}' vendas.csv
+caneta 35
+caderno 15
+estojo 7
+mochila 4
+$</pre>
+<hr>
+<h2>5. <code>in</code> e <code>delete</code></h2>
+<p><code>(chave in array)</code> testa se a gaveta existe; <code>delete array[chave]</code> apaga. O clássico “mostrar cada linha só na primeira vez” (um <code>uniq</code> que não precisa de <code>sort</code>) usa <code>!visto[$0]++</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '!visto[$0]++' frutas.txt
+banana
+maçã
+laranja
+uva
+$ awk -F, 'NR &gt; 1 {v[$2]} END {print (&quot;Diego&quot; in v), (&quot;Zeca&quot; in v)}' vendas.csv
+1 0
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Array usado como número</strong>
+<p>Um array não tem valor único; imprimir o array inteiro é erro fatal:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{n[$3]++} END {print n}' log.txt
+awk: lin. de com.:1: (FILENAME=log.txt FNR=10) fatal: tentativa de usar vetor &quot;n&quot; em um contexto escalar
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>n[$1]++</code></td><td>conta por campo 1.</td></tr>
+<tr><td><code>t[$2] += $4</code></td><td>soma por campo 2.</td></tr>
+<tr><td><code>for (k in n) print k, n[k]</code></td><td>percorre (sem ordem garantida).</td></tr>
+<tr><td><code>PROCINFO[&quot;sorted_in&quot;] = &quot;@ind_str_asc&quot;</code></td><td>ordem alfabética (gawk).</td></tr>
+<tr><td><code>(k in n)</code></td><td>a chave existe?</td></tr>
+<tr><td><code>!visto[$0]++</code></td><td>cada linha só na 1ª vez.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Contar</h3><p>Complete para contar por vendedor:</p><div class="ex-code">awk -F, 'NR &gt; 1 {n[<input data-answer="$2" aria-label="campo">]++} END {for (v in n) print v, n[v]}' vendas.csv</div></div><div class="exercise"><h3>2. Percorrer</h3><p>Complete o laço que passa pelas etiquetas:</p><div class="ex-code">END {for (k <input data-answer="in" aria-label="palavra"> n) print k}</div></div><div class="mc" data-answer="3"><p class="mc-q">3. O <code>for (k in n)</code> devolve as chaves em que ordem?</p>
+<label><input type="radio" name="q3"> alfabética</label>
+<label><input type="radio" name="q3"> na ordem em que apareceram</label>
+<label><input type="radio" name="q3"> nenhuma ordem garantida</label>
+<label><input type="radio" name="q3"> numérica</label></div><div class="mc" data-answer="2"><p class="mc-q">4. O que <code>awk '!visto[$0]++' frutas.txt</code> faz?</p>
+<label><input type="radio" name="q4"> conta as frutas</label>
+<label><input type="radio" name="q4"> mostra cada linha só na primeira vez que aparece</label>
+<label><input type="radio" name="q4"> apaga o arquivo</label>
+<label><input type="radio" name="q4"> ordena</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\[\$2\]\+\+;;src:for \(;;outre:^Ana 4$;;outre:^Diego 2$">
+<p class="try-task"><strong>Missão:</strong> conte quantas vendas (linhas) cada vendedor teve em <code>vendas.csv</code>, ordenando o resultado com <code>sort</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk -F, 'NR &gt; 1 {n[$2]++} END {for (v in n) print v, n[v]}' vendas.csv | sort
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Ana 4
+Bruno 3
+Carla 3
+Diego 2
+</pre>
+</div><div class="trycmd" data-goal="src:\[\$3\]\s*\+=;;outre:^caderno 15$;;outre:^caneta 35$;;outre:^mochila 4$">
+<p class="try-task"><strong>Missão:</strong> some a quantidade vendida por produto (coluna 3) e mostre <code>produto total</code>, em ordem alfabética.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk -F, 'NR &gt; 1 {q[$3] += $4} END {for (p in q) print p, q[p]}' vendas.csv | sort
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+caderno 15
+caneta 35
+estojo 7
+mochila 4
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>a[chave]</code> cria a gaveta na hora.</li>
+<li>O <code>for in</code> não tem ordem: use <code>sort</code> ou <code>PROCINFO</code>.</li>
+<li><code>!visto[$0]++</code> tira repetidos sem ordenar.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

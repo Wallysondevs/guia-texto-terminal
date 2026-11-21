@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Padrões e condições no awk | Guia Texto no Terminal</title>
+<meta name="description" content="Padrões no awk: comparações por coluna, ~ e !~ com regex, &amp;&amp;, ||, !, NR e faixas de linhas.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Padrões e <span class="hl">condições</span></h1>
+
+<p class="intro">O awk filtra por coluna: nota maior que 8, nível igual a ERRO, status 500. Esta aula mostra todas as formas de escrever essas condições.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Comparações: <code>==</code>, <code>!=</code>, <code>&gt;</code>, <code>&lt;</code>.</li>
+<li>Regex numa coluna com <code>~</code> e <code>!~</code>.</li>
+<li>Combinar com <code>&amp;&amp;</code>, <code>||</code> e usar <code>NR</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: filtrar pelo conteúdo das colunas</h2>
+<p>O <code>grep</code> filtra pela linha inteira. O awk filtra por <strong>coluna</strong>: “nota 1 maior que 8”, “nível igual a ERRO”, “status HTTP 500”. O padrão é qualquer condição; quando ela é verdadeira, a ação roda (ou a linha é impressa, se não houver ação).</p>
+<hr>
+<h2>1. Comparações</h2>
+<p>Os operadores: <code>==</code> igual, <code>!=</code> diferente, <code>&gt;</code>, <code>&gt;=</code>, <code>&lt;</code>, <code>&lt;=</code>. Texto entre aspas duplas; número sem aspas:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '$3 == &quot;ERRO&quot;' log.txt
+2026-03-02 08:17:45 ERRO  falha no pagamento pedido=1042
+2026-03-02 09:12:03 ERRO  tempo esgotado no servidor de e-mail
+2026-03-02 10:45:20 ERRO  falha no pagamento pedido=1047
+$ awk '$2 &gt;= 8' notas.txt
+Ana 8.5 9.0 7.5
+Carla 9.5 10.0 9.0
+$ awk -F, '$4 &gt; 5 {print $2, $3, $4}' vendas.csv
+vendedor produto quantidade
+Bruno caneta 10
+Carla caderno 6
+Diego caneta 20
+$</pre>
+<p>Repare no cabeçalho na última saída: “quantidade” não é número, então o awk comparou <strong>como texto</strong>, e “quantidade” vem depois de “5” na ordem dos caracteres. Para tabelas com cabeçalho, junte <code>NR &gt; 1 &amp;&amp;</code> na condição.</p>
+<hr>
+<h2>2. Regex numa coluna: <code>~</code> e <code>!~</code></h2>
+<p><code>$3 ~ /ERRO|AVISO/</code> quer dizer “o campo 3 casa com a regex”. Com <code>!~</code>, “não casa”. A regex do awk já é estendida (o <code>|</code> funciona direto):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '$3 ~ /ERRO|AVISO/ {print $2, $3}' log.txt
+08:17:45 ERRO
+09:01:37 AVISO
+09:12:03 ERRO
+10:45:20 ERRO
+11:02:15 AVISO
+$ awk '$1 !~ /^192\.168\.0\.12$/ {print $1, $9}' acesso.log | head -3
+192.168.0.15 200
+192.168.0.20 500
+192.168.0.15 304
+$</pre>
+<hr>
+<h2>3. E, ou, não: <code>&amp;&amp;</code>, <code>||</code>, <code>!</code></h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '$2 &gt;= 7 &amp;&amp; $4 &gt;= 7' notas.txt
+Ana 8.5 9.0 7.5
+Carla 9.5 10.0 9.0
+Eduarda 7.0 8.0 8.5
+$ awk -F, '$3 == &quot;mochila&quot; || $4 &gt;= 10 {print $2, $3, $4}' vendas.csv
+vendedor produto quantidade
+Bruno caneta 10
+Carla mochila 1
+Ana mochila 2
+Diego caneta 20
+Bruno mochila 1
+$</pre>
+<hr>
+<h2>4. Faixas e o número da linha</h2>
+<p><code>NR</code> é o número da linha atual. <code>NR == 1</code> é o cabeçalho; <code>NR &gt; 1</code>, o resto. Dois padrões com vírgula formam uma faixa, como no sed:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk 'NR == 1' vendas.csv
+data,vendedor,produto,quantidade,preco
+$ awk 'NR == 2, NR == 4' notas.txt
+Bruno 6.0 5.5 7.0
+Carla 9.5 10.0 9.0
+Diego 4.0 6.5 5.0
+$ awk '/ERRO/, /AVISO/ {print NR&quot;: &quot;$3}' log.txt
+2: ERRO
+3: INFO
+4: AVISO
+6: ERRO
+7: INFO
+8: ERRO
+9: AVISO
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Texto sem aspas</strong>
+<p>Sem aspas, <code>ERRO</code> é o nome de uma variável vazia, e nenhuma linha casa:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '$3 == ERRO' log.txt; echo &quot;código: $?&quot;
+código: 0
+$</pre>
+<p>Escreva <code>$3 == "ERRO"</code>.</p></div>
+<div class="cenario"><strong>Um = só</strong>
+<p>Um <code>=</code> é atribuição, não comparação: <code>$3 = "ERRO"</code> <strong>muda</strong> o campo 3 de todas as linhas:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '$3 = &quot;ERRO&quot;' log.txt | head -3
+2026-03-02 08:15:02 ERRO login usuario=ana
+2026-03-02 08:17:45 ERRO falha no pagamento pedido=1042
+2026-03-02 08:20:11 ERRO pedido criado pedido=1043
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>$3 == &quot;ERRO&quot;</code></td><td>campo 3 igual a ERRO.</td></tr>
+<tr><td><code>$2 &gt;= 8</code></td><td>campo 2 maior ou igual a 8.</td></tr>
+<tr><td><code>$3 ~ /A|B/</code></td><td>campo 3 casa com a regex.</td></tr>
+<tr><td><code>$1 !~ /x/</code></td><td>campo 1 não casa.</td></tr>
+<tr><td><code>a &amp;&amp; b</code></td><td>as duas condições.</td></tr>
+<tr><td><code>a || b</code></td><td>uma ou outra.</td></tr>
+<tr><td><code>NR &gt; 1</code></td><td>tudo menos a 1ª linha.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Igual</h3><p>Qual operador compara igualdade?</p><div class="ex-code">awk '$3 <input data-answer="==" aria-label="operador"> &quot;ERRO&quot;' log.txt</div></div><div class="exercise"><h3>2. Casa com regex</h3><p>Qual operador testa uma regex num campo?</p><div class="ex-code">awk '$3 <input data-answer="~" aria-label="operador"> /AVISO/' log.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">3. <code>awk 'NR &gt; 1' vendas.csv</code> mostra:</p>
+<label><input type="radio" name="q3"> só o cabeçalho</label>
+<label><input type="radio" name="q3"> tudo menos o cabeçalho</label>
+<label><input type="radio" name="q3"> a última linha</label>
+<label><input type="radio" name="q3"> nada</label></div><div class="mc" data-answer="2"><p class="mc-q">4. O que <code>awk '$3 = "ERRO"' log.txt</code> faz?</p>
+<label><input type="radio" name="q4"> filtra as linhas de ERRO</label>
+<label><input type="radio" name="q4"> troca o campo 3 de todas as linhas por ERRO</label>
+<label><input type="radio" name="q4"> dá erro de sintaxe</label>
+<label><input type="radio" name="q4"> conta os erros</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\$2\s*&lt;\s*7;;out:Bruno 6.0 5.5 7.0;;out:Diego 4.0 6.5 5.0">
+<p class="try-task"><strong>Missão:</strong> mostre as linhas de <code>notas.txt</code> em que a nota 1 (<code>$2</code>) é menor que 7.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk '$2 &lt; 7' notas.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Bruno 6.0 5.5 7.0
+Diego 4.0 6.5 5.0
+</pre>
+</div><div class="trycmd" data-goal="src:\$9;;outre:^192\.168\.0\.20 /pagar$">
+<p class="try-task"><strong>Missão:</strong> do <code>acesso.log</code>, mostre o IP e o caminho (campos 1 e 7) dos pedidos com status 500 (campo 9).</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk '$9 == 500 {print $1, $7}' acesso.log
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+192.168.0.20 /pagar
+192.168.0.20 /pagar
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>Texto entre aspas duplas; número sem aspas.</li>
+<li><code>~</code> testa regex num campo.</li>
+<li><code>==</code> compara; <code>=</code> atribui.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

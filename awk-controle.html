@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>if, for, while, next e exit no awk | Guia Texto no Terminal</title>
+<meta name="description" content="Estruturas de controle do awk: if/else, ternário, for pelos campos, while, next e exit.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">if</span>, <span class="hl">for</span> e <span class="hl">while</span></h1>
+
+<p class="intro">Dentro das chaves, o awk é uma linguagem completa. Esta aula mostra decisões e repetições, com exemplos de notas e logs.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li><code>if</code>/<code>else</code> e o ternário.</li>
+<li><code>for</code> pelos campos e <code>while</code>.</li>
+<li><code>next</code> e <code>exit</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: decisões e repetições</h2>
+<p>Dentro das chaves, o awk é uma linguagem de programação completa, com sintaxe parecida com a do C e do JavaScript: <code>if</code>/<code>else</code> para decidir, <code>for</code> e <code>while</code> para repetir, <code>next</code> para pular para a próxima linha e <code>exit</code> para parar.</p>
+<hr>
+<h2>1. <code>if</code> e <code>else</code></h2>
+<p>A condição vai entre parênteses. Aprovado com média 7 ou mais:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{m = ($2 + $3 + $4) / 3; if (m &gt;= 7) print $1, &quot;aprovado&quot;; else print $1, &quot;reprovado&quot;}' notas.txt
+Ana aprovado
+Bruno reprovado
+Carla aprovado
+Diego reprovado
+Eduarda aprovado
+$</pre>
+<p>Com mais de um comando por ramo, use chaves. E há o operador ternário, <code>condição ? a : b</code>, para escolher um valor:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{m = ($2 + $3 + $4) / 3; printf &quot;%-8s %4.1f %s\n&quot;, $1, m, (m &gt;= 7 ? &quot;ok&quot; : &quot;recuperação&quot;)}' notas.txt
+Ana       8.3 ok
+Bruno     6.2 recuperação
+Carla     9.5 ok
+Diego     5.2 recuperação
+Eduarda   7.8 ok
+$</pre>
+<hr>
+<h2>2. <code>for</code>: percorrer os campos</h2>
+<p>O <code>for (i = 2; i &lt;= NF; i++)</code> passa por cada campo a partir do 2º. Aqui, a maior nota de cada aluno:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{max = $2; for (i = 3; i &lt;= NF; i++) if ($i &gt; max) max = $i; print $1, max}' notas.txt
+Ana 9.0
+Bruno 7.0
+Carla 10.0
+Diego 6.5
+Eduarda 8.5
+$</pre>
+<dl class="anatomy"><dt>max = $2</dt><dd>começa com a primeira nota.</dd><dt>for (i = 3; i &lt;= NF; i++)</dt><dd>i vai de 3 até o último campo.</dd><dt>if ($i &gt; max) max = $i</dt><dd>$i é o campo de número i.</dd><dt>print $1, max</dt><dd>nome e maior nota.</dd></dl>
+<hr>
+<h2>3. <code>while</code></h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk 'BEGIN {i = 1; while (i &lt;= 5) {printf &quot;%d &quot;, i * i; i++}; print &quot;&quot;}'
+1 4 9 16 25 
+$</pre>
+<hr>
+<h2>4. <code>next</code> e <code>exit</code></h2>
+<p><code>next</code> abandona a linha atual e vai para a próxima (aqui, pula comentários e linhas vazias). <code>exit</code> encerra o programa (indo para o <code>END</code>, se houver):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '/^#/ || /^$/ {next} {print &quot;config:&quot;, $0}' config.txt
+config: nome=Loja da Ana
+config: porta=8080
+config: debug=sim
+config: email=contato@lojadaana.example
+config: tema=claro
+config: idioma=pt-BR
+$ awk '$3 == &quot;ERRO&quot; {print &quot;primeiro erro na linha&quot;, NR; exit}' log.txt
+primeiro erro na linha 2
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>if sem parênteses</strong>
+<p>A condição do <code>if</code> precisa de parênteses:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{if $2 &gt; 7 print $1}' notas.txt
+awk: lin. de com.:1: {if $2 &gt; 7 print $1}
+awk: lin. de com.:1:     ^ syntax error
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>if (c) a; else b</code></td><td>decide.</td></tr>
+<tr><td><code>c ? x : y</code></td><td>escolhe um valor.</td></tr>
+<tr><td><code>for (i = 1; i &lt;= NF; i++)</code></td><td>percorre os campos.</td></tr>
+<tr><td><code>while (c) {...}</code></td><td>repete enquanto c.</td></tr>
+<tr><td><code>next</code></td><td>vai para a próxima linha.</td></tr>
+<tr><td><code>exit</code></td><td>encerra (roda o END).</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Senão</h3><p>Complete o ramo do “senão”:</p><div class="ex-code">if (m &gt;= 7) print &quot;ok&quot;; <input data-answer="else" aria-label="palavra"> print &quot;não&quot;</div></div><div class="exercise"><h3>2. Pular linha</h3><p>Qual comando pula para a próxima linha?</p><div class="ex-code">awk '/^#/ {<input data-answer="next" aria-label="comando">} {print}' config.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">3. No <code>for (i = 2; i &lt;= NF; i++)</code>, <code>$i</code> é:</p>
+<label><input type="radio" name="q3"> a variável i</label>
+<label><input type="radio" name="q3"> o campo de número i</label>
+<label><input type="radio" name="q3"> sempre o campo 2</label>
+<label><input type="radio" name="q3"> o número de campos</label></div><div class="mc" data-answer="2"><p class="mc-q">4. O que o <code>exit</code> faz?</p>
+<label><input type="radio" name="q4"> apaga o arquivo</label>
+<label><input type="radio" name="q4"> encerra o programa (ainda rodando o END, se houver)</label>
+<label><input type="radio" name="q4"> pula a linha</label>
+<label><input type="radio" name="q4"> sai do terminal</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\bif\b;;src:\belse\b;;outre:^Ana passou$;;outre:^Diego ficou$">
+<p class="try-task"><strong>Missão:</strong> para cada aluno de <code>notas.txt</code>, mostre o nome e <code>passou</code> se a nota 3 (<code>$4</code>) for 7 ou mais, senão <code>ficou</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk '{if ($4 &gt;= 7) print $1, &quot;passou&quot;; else print $1, &quot;ficou&quot;}' notas.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Ana passou
+Bruno passou
+Carla passou
+Diego ficou
+Eduarda passou
+</pre>
+</div><div class="trycmd" data-goal="src:\bfor\b;;outre:^Ana 25$;;outre:^Carla 28\.5$">
+<p class="try-task"><strong>Missão:</strong> com um <code>for</code> pelos campos, some as três notas de cada aluno e mostre <code>nome soma</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk '{s = 0; for (i = 2; i &lt;= NF; i++) s += $i; print $1, s}' notas.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Ana 25
+Bruno 18.5
+Carla 28.5
+Diego 15.5
+Eduarda 23.5
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>A condição do <code>if</code> vai entre parênteses.</li>
+<li><code>$i</code> é o campo de número i.</li>
+<li><code>next</code> pula a linha; <code>exit</code> encerra.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

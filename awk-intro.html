@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Como o awk funciona: padrão e ação | Guia Texto no Terminal</title>
+<meta name="description" content="Primeiros passos com o awk (gawk): padrão e ação, $0, $1, filtros com regex e os erros mais comuns.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Como o <span class="hl">awk</span> funciona (padrão { ação })</h1>
+
+<p class="intro">O <code>awk</code> lê o texto linha a linha e já corta cada linha em colunas. Com um padrão e uma ação, ele filtra e reorganiza em uma linha de comando.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>A estrutura <code>padrão { ação }</code>.</li>
+<li><code>$0</code>, <code>$1</code> e o <code>print</code>.</li>
+<li>Filtrar com regex, com e sem ação.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: padrão e ação</h2>
+<p>O <code>awk</code> também lê o texto linha a linha, como o <code>sed</code>. A diferença é que ele já <strong>corta cada linha em campos</strong> (colunas) e deixa você fazer contas e decisões com eles. Um programa awk é uma lista de pares <code>padrão { ação }</code>: para cada linha que casa com o padrão, a ação roda.</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{print $1}' notas.txt
+Ana
+Bruno
+Carla
+Diego
+Eduarda
+$</pre>
+<dl class="anatomy"><dt>awk</dt><dd>o programa.</dd><dt>'{print $1}'</dt><dd>o programa awk, entre aspas simples. Sem padrão, a ação vale em todas as linhas.</dd><dt>$1</dt><dd>o primeiro campo da linha.</dd><dt>notas.txt</dt><dd>o arquivo.</dd></dl>
+<hr>
+<h2>1. A linha inteira: <code>$0</code></h2>
+<p><code>$0</code> é a linha toda. <code>print</code> sozinho também imprime a linha toda, e o awk vira um <code>cat</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{print $0}' nomes.txt | head -3
+Ana
+bruno
+Carla
+$ awk '{print}' frutas.txt | head -2
+banana
+maçã
+$</pre>
+<hr>
+<h2>2. Só o padrão</h2>
+<p>Sem ação, o awk imprime as linhas que casam com o padrão, como o <code>grep</code>. O padrão pode ser uma regex entre barras:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '/ERRO/' log.txt
+2026-03-02 08:17:45 ERRO  falha no pagamento pedido=1042
+2026-03-02 09:12:03 ERRO  tempo esgotado no servidor de e-mail
+2026-03-02 10:45:20 ERRO  falha no pagamento pedido=1047
+$</pre>
+<hr>
+<h2>3. Padrão e ação juntos</h2>
+<p>Agora o poder de verdade: só nas linhas de ERRO, mostrar a hora (campo 2) e o último pedaço da mensagem:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '/ERRO/ {print $2, $NF}' log.txt
+08:17:45 pedido=1042
+09:12:03 e-mail
+10:45:20 pedido=1047
+$</pre>
+<p><code>$NF</code> é o último campo; a próxima aula explica por quê.</p>
+<div class="note"><strong>gawk</strong><p>As saídas desta aula são do GNU awk 5.2 (<code>gawk</code>), que o comando <code>awk</code> chama depois de <code>sudo apt install gawk</code>.</p></div>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Chave sem fechar</strong>
+<p>O gawk mostra a linha do programa e aponta com <code>^</code> onde se perdeu:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{print $1' notas.txt
+awk: lin. de com.:1: {print $1
+awk: lin. de com.:1:          ^ nova linha ou fim de string inesperado
+$</pre>
+</div>
+<div class="cenario"><strong>Aspas duplas</strong>
+<p>Com aspas duplas, o Bash troca <code>$1</code> pelo primeiro argumento do shell (vazio) antes de o awk ver. O <code>print</code> sem argumento imprime a linha inteira, e não a coluna 1:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk &quot;{print $1}&quot; notas.txt | head -2
+Ana 8.5 9.0 7.5
+Bruno 6.0 5.5 7.0
+$</pre>
+<p>Use sempre aspas simples em volta do programa awk.</p></div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>awk '{print $1}' arq</code></td><td>a 1ª coluna.</td></tr>
+<tr><td><code>awk '{print}' arq</code></td><td>a linha toda (como cat).</td></tr>
+<tr><td><code>awk '/x/' arq</code></td><td>as linhas com x (como grep).</td></tr>
+<tr><td><code>awk '/x/ {print $2}' arq</code></td><td>a 2ª coluna das linhas com x.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Primeira coluna</h3><p>Complete para imprimir a 1ª coluna:</p><div class="ex-code">awk '{print <input data-answer="$1" aria-label="campo">}' notas.txt</div></div><div class="exercise"><h3>2. A linha inteira</h3><p>Qual variável é a linha inteira?</p><div class="ex-code">awk '{print <input data-answer="$0" aria-label="variável">}' notas.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">3. Um programa awk é feito de pares:</p>
+<label><input type="radio" name="q3"> comando e opção</label>
+<label><input type="radio" name="q3"> padrão { ação }</label>
+<label><input type="radio" name="q3"> endereço e flag</label>
+<label><input type="radio" name="q3"> entrada e saída</label></div><div class="mc" data-answer="1"><p class="mc-q">4. <code>awk '/ERRO/' log.txt</code> faz o mesmo que:</p>
+<label><input type="radio" name="q4"> <code>grep ERRO log.txt</code></label>
+<label><input type="radio" name="q4"> <code>sed 's/ERRO//' log.txt</code></label>
+<label><input type="radio" name="q4"> <code>wc -l log.txt</code></label>
+<label><input type="radio" name="q4"> <code>cut -f ERRO</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\bawk\b;;src:\$1;;outre:^Ana$;;outre:^Eduarda$">
+<p class="try-task"><strong>Missão:</strong> mostre só os nomes (1ª coluna) de <code>notas.txt</code> com o <code>awk</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk '{print $1}' notas.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Ana
+Bruno
+Carla
+Diego
+Eduarda
+</pre>
+</div><div class="trycmd" data-goal="src:\bawk\b;;src:/AVISO/;;outre:^09:01:37$;;outre:^11:02:15$">
+<p class="try-task"><strong>Missão:</strong> mostre a hora (2ª coluna) das linhas de <code>log.txt</code> com <code>AVISO</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk '/AVISO/ {print $2}' log.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+09:01:37
+11:02:15
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>Um programa awk é uma lista de <code>padrão { ação }</code>.</li>
+<li><code>$0</code> é a linha; <code>$1</code>, <code>$2</code>… as colunas.</li>
+<li>Programa awk sempre entre aspas simples.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

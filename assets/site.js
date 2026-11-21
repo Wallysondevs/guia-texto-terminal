@@ -39,6 +39,26 @@ var NIVEIS = [
       ["sed-varios.html", "Vários comandos e scripts (-e, ;, {}, -f)"],
       ["sed-y-hold.html", "y e o espaço reserva (h, G, x)"]
     ]}
+  ]},
+  { id: "n3", nome: "Nível 3 · awk", curto: "awk", desc: "Colunas, contas, contagens e relatórios", grupos: [
+    { grupo: "Primeiros passos", itens: [
+      ["awk-intro.html", "Como o awk funciona (padrão { ação })"],
+      ["awk-campos.html", "Campos, $NF e -F"],
+      ["awk-printf.html", "print e printf"],
+      ["awk-padroes.html", "Padrões e condições"]
+    ]},
+    { grupo: "Contas e variáveis", itens: [
+      ["awk-begin-end.html", "BEGIN e END"],
+      ["awk-variaveis.html", "Variáveis (NR, NF, FS, OFS, -v)"],
+      ["awk-contas.html", "Somas, médias e máximos"],
+      ["awk-arrays.html", "Arrays associativos (contagens)"]
+    ]},
+    { grupo: "Programando em awk", itens: [
+      ["awk-strings.html", "Funções de texto"],
+      ["awk-controle.html", "if, for, while, next e exit"],
+      ["awk-scripts.html", "Scripts awk (-f), -v e funções"],
+      ["awk-csv.html", "CSV com awk (e o FPAT do gawk)"]
+    ]}
   ]}
 ];
 /* fim-NIVEIS */

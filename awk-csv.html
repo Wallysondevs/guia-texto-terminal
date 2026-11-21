@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSV com awk: cabeçalho, colunas por nome e FPAT | Guia Texto no Terminal</title>
+<meta name="description" content="Trabalhar com CSV no awk: pular cabeçalho, gerar CSV, colunas pelo nome, vírgula dentro de aspas com FPAT (gawk) e o \r do Windows.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>CSV com <span class="hl">awk</span></h1>
+
+<p class="intro">CSV é o formato das planilhas. Esta aula junta o que você aprendeu num fluxo completo e mostra o limite do <code>-F,</code> com campos entre aspas.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Filtrar e gerar CSV com cabeçalho.</li>
+<li>Pedir colunas pelo nome.</li>
+<li>Campos com vírgula dentro: o <code>FPAT</code> do gawk.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: CSV de verdade</h2>
+<p>CSV (<em>comma-separated values</em>) é o formato que as planilhas exportam. Na maioria das vezes, <code>-F,</code> resolve, como você viu. O problema aparece quando um campo tem vírgula dentro, protegido por aspas: <code>"Souza, Ana"</code>. Esta aula junta o que você aprendeu num fluxo de CSV e mostra o limite do <code>-F,</code>.</p>
+<hr>
+<h2>1. Cabeçalho, filtro e total</h2>
+<p>O roteiro comum: pular o cabeçalho, filtrar, calcular e escrever outro CSV. Aqui, só as vendas da Ana, com uma coluna nova de total:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, 'BEGIN {OFS = &quot;,&quot;} NR == 1 {print $1, $3, &quot;total&quot;; next} $2 == &quot;Ana&quot; {print $1, $3, $4 * $5}' vendas.csv
+data,produto,total
+2026-03-02,caderno,37.5
+2026-03-03,caneta,10
+2026-03-04,mochila,179.8
+2026-03-05,caderno,50
+$</pre>
+<hr>
+<h2>2. Usando os nomes das colunas</h2>
+<p>Lendo o cabeçalho num array, dá para pedir a coluna pelo nome, e o script continua funcionando se as colunas mudarem de lugar:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, 'NR == 1 {for (i = 1; i &lt;= NF; i++) col[$i] = i; next} {print $col[&quot;produto&quot;], $col[&quot;preco&quot;]}' vendas.csv | head -3
+caderno 12.50
+caneta 2.00
+mochila 89.90
+$</pre>
+<hr>
+<h2>3. O problema da vírgula dentro do campo</h2>
+<p>Com <code>-F,</code>, a vírgula de dentro das aspas também corta, e o campo 2 sai pela metade:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ echo '7,&quot;Souza, Ana&quot;,28' | awk -F, '{print $2}'
+&quot;Souza
+$</pre>
+<p>O gawk tem a variável <code>FPAT</code>, que descreve <strong>como é um campo</strong> em vez de como é o separador: “ou uma sequência sem vírgulas, ou algo entre aspas”:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ echo '7,&quot;Souza, Ana&quot;,28' | awk -v FPAT='([^,]*)|(&quot;[^&quot;]*&quot;)' '{print $2; print NF, &quot;campos&quot;}'
+&quot;Souza, Ana&quot;
+3 campos
+$</pre>
+<div class="warning"><strong>Só no gawk</strong><p>O <code>FPAT</code> é do gawk. O mawk ignora a variável e continua separando por espaços: na coleta, ele devolveu o campo 2 errado. (O gawk 5.3, mais novo que o deste guia, ainda ganhou a opção <code>--csv</code>.)</p></div>
+<pre class="term" data-cwd="~/guia-texto-teste">$ echo '7,&quot;Souza, Ana&quot;,28' | mawk -v FPAT='([^,]*)|(&quot;[^&quot;]*&quot;)' '{print $2}'
+Ana&quot;,28
+$</pre>
+<hr>
+<h2>4. CSV para tabela legível</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, '{printf &quot;%-11s %-9s %-8s %10s %6s\n&quot;, $1, $2, $3, $4, $5}' vendas.csv | head -5
+data        vendedor  produto  quantidade  preco
+2026-03-02  Ana       caderno           3  12.50
+2026-03-02  Bruno     caneta           10   2.00
+2026-03-02  Carla     mochila           1  89.90
+2026-03-03  Ana       caneta            5   2.00
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Fim de linha do Windows</strong>
+<p>Um CSV salvo no Windows tem <code>\r</code> antes de cada quebra de linha. O último campo carrega esse caractere invisível e a comparação falha. Na coleta, criamos uma linha assim com <code>printf</code>; o <code>$3 == "28"</code> deu falso:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ printf '7,Ana,28\r\n' | awk -F, '{print ($3 == &quot;28&quot;) ? &quot;igual&quot; : &quot;diferente&quot;}'
+diferente
+$</pre>
+<p>Limpe antes com <code>sed 's/\r$//'</code> ou, no awk, <code>sub(/\r$/, "")</code>.</p></div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>awk -F, 'NR &gt; 1 ...'</code></td><td>pula o cabeçalho.</td></tr>
+<tr><td><code>BEGIN {OFS = &quot;,&quot;}</code></td><td>saída em CSV.</td></tr>
+<tr><td><code>col[$i] = i</code></td><td>mapa nome → número da coluna.</td></tr>
+<tr><td><code>-v FPAT='([^,]*)|(&quot;[^&quot;]*&quot;)'</code></td><td>campos com aspas (gawk).</td></tr>
+<tr><td><code>sub(/\r$/, &quot;&quot;)</code></td><td>tira o \r do Windows.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Pular o cabeçalho</h3><p>Complete para pular a primeira linha:</p><div class="ex-code">awk -F, '<input data-answer="NR &gt; 1" aria-label="padrão"> {print $2}' vendas.csv</div></div><div class="exercise"><h3>2. Campo como padrão</h3><p>Qual variável do gawk descreve como é um campo?</p><div class="ex-code">awk -v <input data-answer="FPAT" aria-label="variável">='([^,]*)|(&quot;[^&quot;]*&quot;)'</div></div><div class="mc" data-answer="1"><p class="mc-q">3. Por que <code>-F,</code> falha em <code>"Souza, Ana"</code>?</p>
+<label><input type="radio" name="q3"> Porque a vírgula dentro das aspas também corta</label>
+<label><input type="radio" name="q3"> Porque o nome tem espaço</label>
+<label><input type="radio" name="q3"> Porque falta o OFS</label>
+<label><input type="radio" name="q3"> Não falha</label></div><div class="mc" data-answer="2"><p class="mc-q">4. Qual problema o <code>\r</code> de arquivos do Windows causa?</p>
+<label><input type="radio" name="q4"> Nenhum</label>
+<label><input type="radio" name="q4"> O último campo carrega um caractere invisível e comparações falham</label>
+<label><input type="radio" name="q4"> O awk não abre o arquivo</label>
+<label><input type="radio" name="q4"> As linhas somem</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:OFS;;outre:^vendedor,total$;;outre:^Ana,179\.8$;;outre:^Bruno,89\.9$">
+<p class="try-task"><strong>Missão:</strong> a partir de <code>vendas.csv</code>, gere um CSV só com <code>vendedor,total</code> (quantidade × preço) das linhas de <code>mochila</code>, com cabeçalho.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk -F, 'BEGIN {OFS = &quot;,&quot;; print &quot;vendedor,total&quot;} $3 == &quot;mochila&quot; {print $2, $4 * $5}' vendas.csv
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+vendedor,total
+Carla,89.9
+Ana,179.8
+Bruno,89.9
+</pre>
+</div><div class="trycmd" data-goal="src:FPAT;;outre:^\&quot;Lima, Bruno\&quot;$">
+<p class="try-task"><strong>Missão:</strong> use o <code>FPAT</code> para mostrar o nome (campo 2) de <code>echo '9,"Lima, Bruno",35'</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+echo '9,&quot;Lima, Bruno&quot;,35' | awk -v FPAT='([^,]*)|(&quot;[^&quot;]*&quot;)' '{print $2}'
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+&quot;Lima, Bruno&quot;
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>-F,</code> resolve CSV simples.</li>
+<li>Vírgula dentro de aspas pede o <code>FPAT</code> do gawk.</li>
+<li>Arquivo do Windows? Tire o <code>\r</code> antes.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

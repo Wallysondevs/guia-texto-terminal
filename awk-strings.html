@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Funções de texto no awk: length, substr, toupper, split, gsub | Guia Texto no Terminal</title>
+<meta name="description" content="Funções de string do awk: length, substr, toupper, tolower, index, split, sub e gsub, com acentos no gawk.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Funções de <span class="hl">texto</span></h1>
+
+<p class="intro">Medir, cortar, procurar e trocar dentro do texto: o awk tem funções prontas para tudo isso, e no gawk elas entendem acentos.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li><code>length</code>, <code>substr</code>, <code>toupper</code> e <code>tolower</code>.</li>
+<li><code>index</code> e <code>split</code>.</li>
+<li><code>sub</code> e <code>gsub</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: mexer dentro do texto</h2>
+<p>O awk tem funções prontas para medir, cortar, procurar e trocar texto. No gawk, em <code>pt_BR.UTF-8</code>, elas contam <strong>letras</strong>, não bytes, então acentos funcionam direito.</p>
+<div class="table-wrap"><table class="ref">
+<tr><th>Função</th><th>O que faz</th></tr>
+<tr><td><code>length(s)</code></td><td>o tamanho de <code>s</code> (sem argumento: da linha)</td></tr>
+<tr><td><code>substr(s, i, n)</code></td><td><code>n</code> letras de <code>s</code> a partir da posição <code>i</code> (começa em 1)</td></tr>
+<tr><td><code>toupper(s)</code> / <code>tolower(s)</code></td><td>maiúsculas / minúsculas</td></tr>
+<tr><td><code>index(s, t)</code></td><td>a posição de <code>t</code> dentro de <code>s</code> (0 se não tem)</td></tr>
+<tr><td><code>split(s, a, sep)</code></td><td>quebra <code>s</code> no array <code>a</code>; devolve quantos pedaços</td></tr>
+<tr><td><code>sub(re, t, s)</code> / <code>gsub(re, t, s)</code></td><td>troca a primeira / todas as ocorrências (como o <code>s</code> do sed)</td></tr>
+</table></div>
+<hr>
+<h2>1. <code>length</code>, <code>substr</code> e maiúsculas</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{print length($0), $0}' nomes.txt | head -5
+3 Ana
+5 bruno
+5 Carla
+5 Diego
+9 ana paula
+$ awk '{print substr($1, 1, 3)}' notas.txt
+Ana
+Bru
+Car
+Die
+Edu
+$ awk '{print toupper($0)}' frutas.txt | head -2
+BANANA
+MAÇÃ
+$</pre>
+<p>“maçã” virou “MAÇÃ”, com acentos: diferente do <code>tr</code> do Nível 1.</p>
+<hr>
+<h2>2. <code>index</code> e <code>split</code></h2>
+<p><code>split</code> quebra o campo da data em ano, mês e dia:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, 'NR == 2 {n = split($1, d, &quot;-&quot;); print n, &quot;pedaços:&quot;, d[3] &quot;/&quot; d[2] &quot;/&quot; d[1]}' vendas.csv
+3 pedaços: 02/03/2026
+$ awk '{print index($0, &quot;@&quot;), $0}' contatos.txt | head -2
+30 Ana Souza;(11) 91234-5678;ana@exemplo.com
+33 Bruno Lima;(21) 99876-5432;bruno@exemplo.com
+$</pre>
+<hr>
+<h2>3. <code>sub</code> e <code>gsub</code></h2>
+<p>Como o <code>s</code> do sed, mas dentro do awk e podendo mirar um campo só. Sem o terceiro argumento, trocam na linha inteira (<code>$0</code>):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{gsub(/rato/, &quot;gato&quot;); print}' texto.txt
+O gato roeu a roupa do rei de Roma.
+A rainha, com raiva, rasgou o resto.
+O gato fugiu para o mato.
+Rato que é gato não volta.
+$ awk -F';' '{sub(/@.*/, &quot;&quot;, $3); print $1 &quot; -&gt; &quot; $3}' contatos.txt
+Ana Souza -&gt; ana
+Bruno Lima -&gt; bruno
+Carla Dias -&gt; carla
+Diego Rocha -&gt; diego
+$</pre>
+<hr>
+<h2>4. Juntando tudo</h2>
+<p>Primeira letra maiúscula em cada nome de <code>nomes.txt</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{print toupper(substr($0, 1, 1)) substr($0, 2)}' nomes.txt
+Ana
+Bruno
+Carla
+Diego
+Ana paula
+Bruno
+Eduarda
+Carla
+Fábio
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Função sem argumento</strong>
+<p>O <code>substr</code> precisa de pelo menos o texto e a posição:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{print substr($1)}' notas.txt
+awk: lin. de com.:1: {print substr($1)}
+awk: lin. de com.:1:                 ^ 1 é inválido como número de argumentos para substr
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>length($1)</code></td><td>tamanho do campo 1.</td></tr>
+<tr><td><code>substr($1, 1, 3)</code></td><td>3 letras a partir da 1ª.</td></tr>
+<tr><td><code>toupper($0)</code></td><td>maiúsculas.</td></tr>
+<tr><td><code>index($0, &quot;@&quot;)</code></td><td>posição do @.</td></tr>
+<tr><td><code>split($1, d, &quot;-&quot;)</code></td><td>quebra em d[1], d[2]...</td></tr>
+<tr><td><code>gsub(/a/, &quot;b&quot;)</code></td><td>troca todas na linha.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Tamanho</h3><p>Qual função mede o tamanho do texto?</p><div class="ex-code">awk '{print <input data-answer="length" aria-label="função">($1)}' notas.txt</div></div><div class="exercise"><h3>2. Todas as ocorrências</h3><p>Qual função troca todas as ocorrências?</p><div class="ex-code">awk '{<input data-answer="gsub" aria-label="função">(/a/, &quot;4&quot;); print}' frutas.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">3. Em <code>substr("banana", 2, 3)</code>, o resultado é:</p>
+<label><input type="radio" name="q3"> ban</label>
+<label><input type="radio" name="q3"> ana</label>
+<label><input type="radio" name="q3"> nan</label>
+<label><input type="radio" name="q3"> anan</label></div><div class="mc" data-answer="2"><p class="mc-q">4. No gawk em UTF-8, <code>toupper("maçã")</code> dá:</p>
+<label><input type="radio" name="q4"> MAçã</label>
+<label><input type="radio" name="q4"> MAÇÃ</label>
+<label><input type="radio" name="q4"> maçã</label>
+<label><input type="radio" name="q4"> erro</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:toupper;;outre:^MAÇÃ$;;outre:^LARANJA$">
+<p class="try-task"><strong>Missão:</strong> mostre <code>frutas.txt</code> em maiúsculas com a função <code>toupper</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk '{print toupper($0)}' frutas.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+BANANA
+MAÇÃ
+LARANJA
+BANANA
+UVA
+MAÇÃ
+BANANA
+</pre>
+</div><div class="trycmd" data-goal="src:gsub;;out:2026/03/02,Ana,caderno;;outre:^data,vendedor,produto,quantidade,preco$">
+<p class="try-task"><strong>Missão:</strong> com <code>gsub</code>, troque todos os <code>-</code> das datas de <code>vendas.csv</code> por <code>/</code> (mostre o arquivo todo).</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk '{gsub(/-/, &quot;/&quot;); print}' vendas.csv
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+data,vendedor,produto,quantidade,preco
+2026/03/02,Ana,caderno,3,12.50
+2026/03/02,Bruno,caneta,10,2.00
+2026/03/02,Carla,mochila,1,89.90
+2026/03/03,Ana,caneta,5,2.00
+2026/03/03,Diego,caderno,2,12.50
+2026/03/03,Bruno,estojo,4,15.00
+2026/03/04,Carla,caderno,6,12.50
+2026/03/04,Ana,mochila,2,89.90
+2026/03/04,Diego,caneta,20,2.00
+2026/03/05,Bruno,mochila,1,89.90
+2026/03/05,Carla,estojo,3,15.00
+2026/03/05,Ana,caderno,4,12.50
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>As funções do gawk contam letras, não bytes.</li>
+<li><code>split</code> devolve quantos pedaços e enche um array.</li>
+<li><code>sub</code> e <code>gsub</code> são o <code>s</code> do sed dentro do awk.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Somas, médias e máximos com awk | Guia Texto no Terminal</title>
+<meta name="description" content="Contas no awk: somar colunas, faturamento, médias por linha e da coluna, maior valor e conversão de texto em número.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Somas, <span class="hl">médias</span> e máximos</h1>
+
+<p class="intro">Total vendido, média da turma, maior venda: com uma variável acumulando e um <code>END</code>, o awk faz as contas da planilha.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Somar uma coluna e uma conta.</li>
+<li>Médias por linha e da coluna inteira.</li>
+<li>Achar o maior valor e entender a conversão de texto em número.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: a planilha faz contas</h2>
+<p>O awk entende números: soma, subtração, multiplicação, divisão, potência e resto (<code>+ - * / ^ %</code>). Com uma variável acumulando linha a linha e um <code>END</code> para mostrar, você tem totais e médias em uma linha de comando.</p>
+<hr>
+<h2>1. Somar uma coluna</h2>
+<p><code>total += $4</code> soma a quantidade de cada linha em <code>total</code> (o mesmo que <code>total = total + $4</code>):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, 'NR &gt; 1 {total += $4} END {print &quot;itens vendidos:&quot;, total}' vendas.csv
+itens vendidos: 61
+$</pre>
+<hr>
+<h2>2. Somar uma conta</h2>
+<p>O faturamento é quantidade vezes preço, linha a linha:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, 'NR &gt; 1 {fat += $4 * $5} END {printf &quot;faturamento: R$ %.2f\n&quot;, fat}' vendas.csv
+faturamento: R$ 722.10
+$</pre>
+<dl class="anatomy"><dt>NR &gt; 1</dt><dd>pula o cabeçalho.</dd><dt>fat += $4 * $5</dt><dd>acumula quantidade × preço.</dd><dt>END {printf ...}</dt><dd>no fim, mostra com 2 casas.</dd></dl>
+<hr>
+<h2>3. Médias</h2>
+<p>A média de cada aluno (três notas) e a média da turma na prova 1:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{printf &quot;%-8s %.2f\n&quot;, $1, ($2 + $3 + $4) / 3}' notas.txt
+Ana      8.33
+Bruno    6.17
+Carla    9.50
+Diego    5.17
+Eduarda  7.83
+$ awk '{soma += $2} END {printf &quot;média da prova 1: %.2f\n&quot;, soma / NR}' notas.txt
+média da prova 1: 7.00
+$</pre>
+<hr>
+<h2>4. Maior e menor</h2>
+<p>Guarde o maior visto até agora e compare a cada linha:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, 'NR &gt; 1 &amp;&amp; $4 &gt; max {max = $4; quem = $2} END {print &quot;maior quantidade:&quot;, max, &quot;(&quot; quem &quot;)&quot;}' vendas.csv
+maior quantidade: 20 (Diego)
+$</pre>
+<hr>
+<h2>5. Número em texto</h2>
+<p>O awk converte texto em número sozinho, lendo os dígitos do começo. <code>"85%"</code> vira 85; um texto sem número vira 0:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk 'BEGIN {print &quot;85%&quot; + 0, &quot;abc&quot; + 0, &quot;3.5kg&quot; * 2}'
+85 0 7
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Divisão por zero</strong>
+<p>Dividir por zero é erro fatal. Aqui, a média das linhas de nível FATAL, que não existem no log, então <code>n</code> ficou valendo 0:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '$3 == &quot;FATAL&quot; {n++; s += NF} END {print s / n}' log.txt
+awk: lin. de com.:1: (FILENAME=log.txt FNR=10) fatal: tentativa de divisão por zero
+$</pre>
+<p>Proteja com um <code>if (n &gt; 0)</code> (aula de if e for).</p></div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>{t += $4} END {print t}</code></td><td>soma a coluna 4.</td></tr>
+<tr><td><code>{t += $4 * $5}</code></td><td>soma uma conta.</td></tr>
+<tr><td><code>END {print t / NR}</code></td><td>média.</td></tr>
+<tr><td><code>$4 &gt; max {max = $4}</code></td><td>guarda o maior.</td></tr>
+<tr><td><code>+ - * / ^ %</code></td><td>os operadores.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Acumular</h3><p>Complete para somar a coluna 4 em total:</p><div class="ex-code">awk -F, '{total <input data-answer="+=" aria-label="operador"> $4} END {print total}' vendas.csv</div></div><div class="exercise"><h3>2. Média</h3><p>Complete a média: soma dividida pelo número de linhas:</p><div class="ex-code">awk '{s += $2} END {print s / <input data-answer="NR" aria-label="variável">}' notas.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">3. Quanto o awk calcula para <code>"85%" + 0</code>?</p>
+<label><input type="radio" name="q3"> 0</label>
+<label><input type="radio" name="q3"> 85</label>
+<label><input type="radio" name="q3"> erro</label>
+<label><input type="radio" name="q3"> 0.85</label></div><div class="mc" data-answer="1"><p class="mc-q">4. Por que usar <code>NR &gt; 1</code> ao somar o <code>vendas.csv</code>?</p>
+<label><input type="radio" name="q4"> Para pular o cabeçalho</label>
+<label><input type="radio" name="q4"> Para ir mais rápido</label>
+<label><input type="radio" name="q4"> Porque a linha 1 é vazia</label>
+<label><input type="radio" name="q4"> Porque o awk exige</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\+=;;src:END;;outre:^35$">
+<p class="try-task"><strong>Missão:</strong> some as quantidades (coluna 4) de <code>vendas.csv</code> só das canetas e mostre o total.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk -F, '$3 == &quot;caneta&quot; {t += $4} END {print t}' vendas.csv
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+35
+</pre>
+</div><div class="trycmd" data-goal="src:/\s*3;;outre:^Ana 8\.3$;;outre:^Carla 9\.5$">
+<p class="try-task"><strong>Missão:</strong> mostre a média das três notas de cada aluno de <code>notas.txt</code> com 1 casa decimal, no formato <code>Ana 8.3</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk '{printf &quot;%s %.1f\n&quot;, $1, ($2 + $3 + $4) / 3}' notas.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Ana 8.3
+Bruno 6.2
+Carla 9.5
+Diego 5.2
+Eduarda 7.8
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>x += valor</code> acumula.</li>
+<li>Média = soma / quantidade (cuidado com zero).</li>
+<li>Texto vira número lendo os dígitos do começo.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

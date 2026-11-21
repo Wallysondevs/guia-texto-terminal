@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>print e printf no awk: formatando a saída | Guia Texto no Terminal</title>
+<meta name="description" content="print e printf no awk: vírgula e concatenação, lacunas %s %d %f, casas decimais, largura e alinhamento.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">print</span> e <span class="hl">printf</span></h1>
+
+<p class="intro">O <code>print</code> é rápido; o <code>printf</code> é preciso. Com ele você controla casas decimais, largura e alinhamento: relatórios bonitos.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li><code>print</code> com e sem vírgula.</li>
+<li>O molde do <code>printf</code>: <code>%s</code>, <code>%d</code>, <code>%.2f</code>.</li>
+<li>Largura e alinhamento de colunas.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: controlar a saída</h2>
+<p>O <code>print</code> é rápido: imprime o que você passar e pula linha. O <code>printf</code> é preciso: você escreve um molde (<em>formato</em>) com lacunas e diz o que vai em cada uma, com largura e casas decimais. É assim que se faz relatório alinhado.</p>
+<hr>
+<h2>1. <code>print</code>: vírgula ou não</h2>
+<p>Com vírgula entre os itens, o <code>print</code> põe um espaço (o <code>OFS</code>, da aula de variáveis). Sem vírgula, emenda tudo. Texto vai entre aspas duplas:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{print $1, $2}' notas.txt | head -2
+Ana 8.5
+Bruno 6.0
+$ awk '{print $1 $2}' notas.txt | head -2
+Ana8.5
+Bruno6.0
+$ awk '{print &quot;Aluno:&quot;, $1, &quot;- nota 1:&quot;, $2}' notas.txt | head -2
+Aluno: Ana - nota 1: 8.5
+Aluno: Bruno - nota 1: 6.0
+$</pre>
+<hr>
+<h2>2. <code>printf</code>: o molde</h2>
+<p>As lacunas mais usadas: <code>%s</code> texto, <code>%d</code> número inteiro, <code>%f</code> número com casas (<code>%.2f</code> = 2 casas). O <code>printf</code> não pula linha sozinho: o <code>\n</code> no fim faz isso.</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{printf &quot;%s tirou %.1f na prova 3\n&quot;, $1, $4}' notas.txt
+Ana tirou 7.5 na prova 3
+Bruno tirou 7.0 na prova 3
+Carla tirou 9.0 na prova 3
+Diego tirou 5.0 na prova 3
+Eduarda tirou 8.5 na prova 3
+$</pre>
+<dl class="anatomy"><dt>printf</dt><dd>imprime com molde.</dd><dt>&quot;%s tirou %.1f na prova 3\n&quot;</dt><dd>o molde: texto + lacunas + quebra de linha.</dd><dt>$1</dt><dd>vai na lacuna %s.</dd><dt>$4</dt><dd>vai na lacuna %.1f (1 casa decimal).</dd></dl>
+<hr>
+<h2>3. Largura e alinhamento</h2>
+<p>Um número entre o <code>%</code> e a letra é a largura. Negativo alinha à esquerda; positivo, à direita. Uma tabela bonitinha:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, 'NR &gt; 1 {printf &quot;%-8s %-8s %3d x %6.2f\n&quot;, $2, $3, $4, $5}' vendas.csv | head -5
+Ana      caderno    3 x  12.50
+Bruno    caneta    10 x   2.00
+Carla    mochila    1 x  89.90
+Ana      caneta     5 x   2.00
+Diego    caderno    2 x  12.50
+$</pre>
+<hr>
+<h2>4. <code>%d</code> corta, <code>%.0f</code> arredonda</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk 'BEGIN {printf &quot;%d %.0f %.2f %5.1f|\n&quot;, 7.8, 7.8, 7.8, 7.8}'
+7 8 7.80   7.8|
+$</pre>
+<p>O <code>BEGIN</code> roda antes de ler qualquer linha (aula de BEGIN e END); aqui serve para testar sem arquivo.</p>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Lacunas demais</strong>
+<p>Mais lacunas que valores é erro fatal no gawk:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{printf &quot;%s %s %s\n&quot;, $1}' notas.txt
+awk: lin. de com.:1: (FILENAME=notas.txt FNR=1) fatal: argumentos insuficientes para satisfazer a string de formato
+	`%s %s %s
+'
+	    ^ acabou para este aqui
+$</pre>
+</div>
+<div class="cenario"><strong>Esqueceu o \n</strong>
+<p>Sem <code>\n</code>, tudo sai grudado numa linha só. No terminal, até o prompt seguinte aparece colado no fim dessa linha:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{printf &quot;%s &quot;, $1}' notas.txt
+Ana Bruno Carla Diego Eduarda 
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>print $1, $2</code></td><td>com espaço entre os dois.</td></tr>
+<tr><td><code>print $1 $2</code></td><td>emendados.</td></tr>
+<tr><td><code>printf &quot;%s\n&quot;, $1</code></td><td>texto + quebra de linha.</td></tr>
+<tr><td><code>printf &quot;%.2f\n&quot;, $2</code></td><td>número com 2 casas.</td></tr>
+<tr><td><code>printf &quot;%-8s|\n&quot;, $1</code></td><td>largura 8, à esquerda.</td></tr>
+<tr><td><code>printf &quot;%5d\n&quot;, $4</code></td><td>inteiro, largura 5, à direita.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Duas casas</h3><p>Complete a lacuna para 2 casas decimais:</p><div class="ex-code">awk '{printf &quot;<input data-answer="%.2f" aria-label="lacuna">\n&quot;, $2}' notas.txt</div></div><div class="exercise"><h3>2. Texto</h3><p>Qual lacuna é para texto?</p><div class="ex-code">awk '{printf &quot;<input data-answer="%s" aria-label="lacuna">\n&quot;, $1}' notas.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">3. O que <code>%-8s</code> faz?</p>
+<label><input type="radio" name="q3"> 8 casas decimais</label>
+<label><input type="radio" name="q3"> texto com largura 8, alinhado à esquerda</label>
+<label><input type="radio" name="q3"> 8 espaços antes</label>
+<label><input type="radio" name="q3"> corta o texto em 8 letras</label></div><div class="mc" data-answer="1"><p class="mc-q">4. Por que a saída do <code>printf</code> às vezes sai grudada?</p>
+<label><input type="radio" name="q4"> Porque ele não pula linha sem o \n</label>
+<label><input type="radio" name="q4"> Porque falta a vírgula</label>
+<label><input type="radio" name="q4"> Porque o arquivo é CSV</label>
+<label><input type="radio" name="q4"> Porque precisa de -F</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:printf;;src:%\.2f;;outre:^Ana: 8\.50$;;outre:^Diego: 4\.00$">
+<p class="try-task"><strong>Missão:</strong> com <code>printf</code>, mostre cada aluno de <code>notas.txt</code> no formato <code>Ana: 8.50</code> (nota 1 com 2 casas).</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk '{printf &quot;%s: %.2f\n&quot;, $1, $2}' notas.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Ana: 8.50
+Bruno: 6.00
+Carla: 9.50
+Diego: 4.00
+Eduarda: 7.00
+</pre>
+</div><div class="trycmd" data-goal="src:printf;;src:-F;;outre:^mochila R\$ 89\.90$;;outre:^caneta R\$ 2\.00$">
+<p class="try-task"><strong>Missão:</strong> mostre o produto e o preço de <code>vendas.csv</code> (sem o cabeçalho) no formato <code>caderno R$ 12.50</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk -F, 'NR &gt; 1 {printf &quot;%s R$ %.2f\n&quot;, $3, $5}' vendas.csv
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+caderno R$ 12.50
+caneta R$ 2.00
+mochila R$ 89.90
+caneta R$ 2.00
+caderno R$ 12.50
+estojo R$ 15.00
+caderno R$ 12.50
+mochila R$ 89.90
+caneta R$ 2.00
+mochila R$ 89.90
+estojo R$ 15.00
+caderno R$ 12.50
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>Vírgula no <code>print</code> põe o separador de saída.</li>
+<li><code>printf</code> não pula linha sem <code>\n</code>.</li>
+<li><code>%-8s</code> e <code>%6.2f</code> alinham colunas.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

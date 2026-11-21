@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Variáveis do awk: NR, NF, FS, OFS, FNR e -v | Guia Texto no Terminal</title>
+<meta name="description" content="Variáveis embutidas do awk: NR, FNR, NF, FS, OFS, FILENAME, o truque $1=$1 e o -v para passar valores do shell.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Variáveis (<span class="hl">NR</span>, <span class="hl">NF</span>, <span class="hl">FS</span>, <span class="hl">OFS</span>)</h1>
+
+<p class="intro">O awk tem um painel de variáveis prontas: o número da linha, quantos campos, os separadores. Esta aula mostra cada uma e como passar as suas com <code>-v</code>.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li><code>NR</code>, <code>FNR</code>, <code>NF</code> e <code>FILENAME</code>.</li>
+<li><code>FS</code>, <code>OFS</code> e o truque <code>$1 = $1</code>.</li>
+<li>Passar valores do shell com <code>-v</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: o painel de controle do awk</h2>
+<p>O awk tem variáveis prontas que contam e configuram a leitura. As principais:</p>
+<div class="table-wrap"><table class="ref">
+<tr><th>Variável</th><th>O que guarda</th></tr>
+<tr><td><code>NR</code></td><td>o número da linha (contando todos os arquivos)</td></tr>
+<tr><td><code>FNR</code></td><td>o número da linha dentro do arquivo atual</td></tr>
+<tr><td><code>NF</code></td><td>quantos campos a linha atual tem</td></tr>
+<tr><td><code>FS</code></td><td>o separador de campos da entrada (o mesmo do <code>-F</code>)</td></tr>
+<tr><td><code>OFS</code></td><td>o separador que o <code>print</code> põe entre os itens</td></tr>
+<tr><td><code>FILENAME</code></td><td>o nome do arquivo que está sendo lido</td></tr>
+</table></div>
+<hr>
+<h2>1. <code>NR</code> e <code>NF</code></h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{print NR &quot;: &quot; $0}' frutas.txt | head -3
+1: banana
+2: maçã
+3: laranja
+$ awk '{print NF &quot; palavras: &quot; $0}' texto.txt
+9 palavras: O rato roeu a roupa do rei de Roma.
+7 palavras: A rainha, com raiva, rasgou o resto.
+6 palavras: O rato fugiu para o mato.
+6 palavras: Rato que é rato não volta.
+$</pre>
+<hr>
+<h2>2. <code>FS</code> e <code>OFS</code></h2>
+<p>Definidos no <code>BEGIN</code>, mudam a leitura e a escrita. Aqui, a entrada é CSV e a saída sai separada por <code>" | "</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk 'BEGIN {FS = &quot;,&quot;; OFS = &quot; | &quot;} {print $2, $3, $4}' vendas.csv | head -3
+vendedor | produto | quantidade
+Ana | caderno | 3
+Bruno | caneta | 10
+$</pre>
+<h2>3. O truque do <code>$1 = $1</code></h2>
+<p>O <code>OFS</code> só entra quando a linha é <strong>remontada</strong>. Atribuir um campo a ele mesmo força a remontagem. Assim se converte CSV em “separado por ponto e vírgula” (e o <code>1</code> sozinho no fim é um padrão sempre verdadeiro, que imprime a linha):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk 'BEGIN {FS = &quot;,&quot;; OFS = &quot;;&quot;} {$1 = $1} 1' vendas.csv | head -3
+data;vendedor;produto;quantidade;preco
+2026-03-02;Ana;caderno;3;12.50
+2026-03-02;Bruno;caneta;10;2.00
+$ head -1 log.txt | awk '{$1 = $1; print}'
+2026-03-02 08:15:02 INFO login usuario=ana
+$</pre>
+<hr>
+<h2>4. <code>FNR</code> e <code>FILENAME</code></h2>
+<p>Com dois arquivos, <code>NR</code> continua contando e <code>FNR</code> recomeça em cada um:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{print FILENAME, NR, FNR}' frutas.txt notas.txt | sed -n '6,9p'
+frutas.txt 6 6
+frutas.txt 7 7
+notas.txt 8 1
+notas.txt 9 2
+$</pre>
+<hr>
+<h2>5. Suas variáveis e o <code>-v</code></h2>
+<p>O <code>-v nome=valor</code> passa um valor do shell para o awk, sem brigar com aspas:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -v minimo=8 '$2 &gt;= minimo {print $1}' notas.txt
+Ana
+Carla
+$ awk -v nivel=AVISO '$3 == nivel {print $2}' log.txt
+09:01:37
+11:02:15
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>-v sem valor</strong>
+<p>O <code>-v</code> exige o formato <code>nome=valor</code>. Depois da mensagem, o gawk despeja a ajuda inteira; o <code>2&gt;&amp;1 | head -3</code> mostra só o começo:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -v minimo '$2 &gt;= minimo' notas.txt 2&gt;&amp;1 | head -3
+awk: argumento &quot;minimo&quot; para &quot;-v&quot; não está na forma &quot;var=valor&quot;
+
+Uso: awk [opções estilo POSIX ou GNU] -f arqprog [--] arquivo ...
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>NR</code></td><td>nº da linha (total).</td></tr>
+<tr><td><code>FNR</code></td><td>nº da linha no arquivo atual.</td></tr>
+<tr><td><code>NF</code></td><td>nº de campos.</td></tr>
+<tr><td><code>BEGIN {FS = &quot;,&quot;}</code></td><td>o mesmo que -F,.</td></tr>
+<tr><td><code>BEGIN {OFS = &quot;;&quot;} {$1 = $1} 1</code></td><td>remonta a linha com ;.</td></tr>
+<tr><td><code>-v x=10</code></td><td>cria a variável x com 10.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Número da linha</h3><p>Qual variável é o número da linha?</p><div class="ex-code">awk '{print <input data-answer="NR" aria-label="variável">, $0}' frutas.txt</div></div><div class="exercise"><h3>2. Separador de saída</h3><p>Qual variável define o separador de saída?</p><div class="ex-code">awk 'BEGIN {<input data-answer="OFS" aria-label="variável"> = &quot;;&quot;} {$1 = $1} 1' arq</div></div><div class="mc" data-answer="2"><p class="mc-q">3. Com dois arquivos, qual variável recomeça em 1 no segundo?</p>
+<label><input type="radio" name="q3"> NR</label>
+<label><input type="radio" name="q3"> FNR</label>
+<label><input type="radio" name="q3"> NF</label>
+<label><input type="radio" name="q3"> FS</label></div><div class="mc" data-answer="2"><p class="mc-q">4. Para passar o valor 8 do shell para o awk como <code>minimo</code>:</p>
+<label><input type="radio" name="q4"> <code>-F minimo=8</code></label>
+<label><input type="radio" name="q4"> <code>-v minimo=8</code></label>
+<label><input type="radio" name="q4"> <code>minimo=8 awk</code></label>
+<label><input type="radio" name="q4"> <code>-n 8</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\bNR\b;;outre:^1\) Ana$;;outre:^9\) Fábio$">
+<p class="try-task"><strong>Missão:</strong> numere as linhas de <code>nomes.txt</code> no formato <code>1) Ana</code> usando <code>NR</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk '{print NR &quot;) &quot; $0}' nomes.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+1) Ana
+2) bruno
+3) Carla
+4) Diego
+5) ana paula
+6) Bruno
+7) Eduarda
+8) Carla
+9) Fábio
+</pre>
+</div><div class="trycmd" data-goal="src:OFS;;src:\$1\s*=\s*\$1;;outre:^2026-03-05\tAna\tcaderno\t4\t12\.50$">
+<p class="try-task"><strong>Missão:</strong> converta <code>vendas.csv</code> para separado por tabulação (<code>\t</code>) com <code>FS</code>, <code>OFS</code> e o truque do <code>$1 = $1</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk 'BEGIN {FS = &quot;,&quot;; OFS = &quot;\t&quot;} {$1 = $1} 1' vendas.csv
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+data	vendedor	produto	quantidade	preco
+2026-03-02	Ana	caderno	3	12.50
+2026-03-02	Bruno	caneta	10	2.00
+2026-03-02	Carla	mochila	1	89.90
+2026-03-03	Ana	caneta	5	2.00
+2026-03-03	Diego	caderno	2	12.50
+2026-03-03	Bruno	estojo	4	15.00
+2026-03-04	Carla	caderno	6	12.50
+2026-03-04	Ana	mochila	2	89.90
+2026-03-04	Diego	caneta	20	2.00
+2026-03-05	Bruno	mochila	1	89.90
+2026-03-05	Carla	estojo	3	15.00
+2026-03-05	Ana	caderno	4	12.50
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>NR</code> conta linhas; <code>NF</code>, campos.</li>
+<li><code>OFS</code> só aparece quando a linha é remontada.</li>
+<li><code>-v</code> traz valores do shell sem brigar com aspas.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BEGIN e END no awk | Guia Texto no Terminal</title>
+<meta name="description" content="Os padrões BEGIN e END do awk: títulos, rodapés, contagens no fim e o awk como calculadora.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">BEGIN</span> e <span class="hl">END</span></h1>
+
+<p class="intro"><code>BEGIN</code> roda antes de tudo; <code>END</code>, depois de tudo. São os lugares do título, das configurações e dos totais.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Título e rodapé com <code>BEGIN</code> e <code>END</code>.</li>
+<li>Contar linhas e ocorrências no <code>END</code>.</li>
+<li>Usar o awk como calculadora.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: antes e depois</h2>
+<p>Dois padrões especiais: <code>BEGIN</code> roda <strong>uma vez antes</strong> de ler a primeira linha, e <code>END</code> roda <strong>uma vez depois</strong> da última. O <code>BEGIN</code> serve para títulos e configurações; o <code>END</code>, para totais e resumos.</p>
+<hr>
+<h2>1. Título e rodapé</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk 'BEGIN {print &quot;== Notas ==&quot;} {print $1} END {print &quot;== fim ==&quot;}' notas.txt
+== Notas ==
+Ana
+Bruno
+Carla
+Diego
+Eduarda
+== fim ==
+$</pre>
+<dl class="anatomy"><dt>BEGIN {...}</dt><dd>roda antes da primeira linha.</dd><dt>{print $1}</dt><dd>roda em cada linha.</dd><dt>END {...}</dt><dd>roda depois da última.</dd></dl>
+<hr>
+<h2>2. Contar no <code>END</code></h2>
+<p>No <code>END</code>, o <code>NR</code> ficou com o número da última linha lida, ou seja, o total de linhas. Também dá para contar só algumas, com uma variável sua:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk 'END {print NR, &quot;linhas&quot;}' log.txt
+10 linhas
+$ awk '/ERRO/ {n++} END {print n, &quot;erros&quot;}' log.txt
+3 erros
+$</pre>
+<p><code>n++</code> soma 1 em <code>n</code>. Variáveis do awk começam vazias, que vale 0 em contas, então não precisa criar antes.</p>
+<hr>
+<h2>3. Só <code>BEGIN</code>: o awk como calculadora</h2>
+<p>Um programa só com <code>BEGIN</code> nem espera arquivo:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk 'BEGIN {print 2 + 3 * 4}'
+14
+$ awk 'BEGIN {printf &quot;%.2f\n&quot;, 10 / 3}'
+3.33
+$ awk 'BEGIN {print 2 ^ 10}'
+1024
+$</pre>
+<hr>
+<h2>4. A última linha fica no <code>END</code></h2>
+<p>No gawk, <code>$0</code> no <code>END</code> ainda guarda a última linha lida:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk 'END {print &quot;última:&quot;, $0}' vendas.csv
+última: 2026-03-05,Ana,caderno,4,12.50
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>BEGIN sem ação</strong>
+<p>O <code>BEGIN</code> e o <code>END</code> sempre precisam de chaves com a ação:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk 'BEGIN' notas.txt
+awk: lin. de com.:1: blocos BEGIN devem ter uma parte de ação
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>BEGIN {...}</code></td><td>antes da 1ª linha.</td></tr>
+<tr><td><code>END {...}</code></td><td>depois da última.</td></tr>
+<tr><td><code>END {print NR}</code></td><td>conta as linhas.</td></tr>
+<tr><td><code>/x/ {n++} END {print n}</code></td><td>conta as linhas com x.</td></tr>
+<tr><td><code>awk 'BEGIN {print 2+3}'</code></td><td>calculadora.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Antes</h3><p>Qual padrão roda antes da primeira linha?</p><div class="ex-code">awk '<input data-answer="BEGIN" aria-label="padrão"> {print &quot;Título&quot;}' notas.txt</div></div><div class="exercise"><h3>2. Depois</h3><p>Qual padrão roda depois da última linha?</p><div class="ex-code">awk '<input data-answer="END" aria-label="padrão"> {print NR}' notas.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">3. <code>awk 'END {print NR}' arq</code> mostra:</p>
+<label><input type="radio" name="q3"> a primeira linha</label>
+<label><input type="radio" name="q3"> o número de linhas</label>
+<label><input type="radio" name="q3"> o número de campos</label>
+<label><input type="radio" name="q3"> nada</label></div><div class="mc" data-answer="1"><p class="mc-q">4. Por que <code>n++</code> funciona sem criar <code>n</code> antes?</p>
+<label><input type="radio" name="q4"> Porque variáveis do awk começam vazias, que vale 0 em contas</label>
+<label><input type="radio" name="q4"> Porque n é especial</label>
+<label><input type="radio" name="q4"> Porque o BEGIN cria</label>
+<label><input type="radio" name="q4"> Não funciona</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:END;;src:\+\+;;outre:^5 infos$">
+<p class="try-task"><strong>Missão:</strong> conte quantas linhas de <code>log.txt</code> têm <code>INFO</code> e mostre <code>5 infos</code> no <code>END</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk '/INFO/ {n++} END {print n, &quot;infos&quot;}' log.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+5 infos
+</pre>
+</div><div class="trycmd" data-goal="src:BEGIN;;src:END;;outre:^Vendas:$;;out:Total de linhas: 13">
+<p class="try-task"><strong>Missão:</strong> mostre <code>Vendas:</code> antes, os produtos (coluna 3, sem o cabeçalho) e <code>Total de linhas: 13</code> no fim, num programa só.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk -F, 'BEGIN {print &quot;Vendas:&quot;} NR &gt; 1 {print $3} END {print &quot;Total de linhas:&quot;, NR}' vendas.csv
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Vendas:
+caderno
+caneta
+mochila
+caneta
+caderno
+estojo
+caderno
+mochila
+caneta
+mochila
+estojo
+caderno
+Total de linhas: 13
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>BEGIN</code> e <code>END</code> rodam uma vez cada.</li>
+<li>No <code>END</code>, <code>NR</code> é o total de linhas.</li>
+<li>Variáveis começam vazias (0 em contas).</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>
