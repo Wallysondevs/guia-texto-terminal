@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Texto no jq: -r, interpolação \( ), join e tostring | Guia Texto no Terminal</title>
+<meta name="description" content="Saída crua com jq -r, interpolação de strings, join, split, ascii_upcase, + e tostring, com o erro de somar texto e número.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Texto: <span class="hl">-r</span>, interpolação e <span class="hl">join</span></h1>
+
+<p class="intro">Para passar o resultado do jq para o terminal, você quer texto, não JSON. Esta aula mostra o <code>-r</code> e as ferramentas de texto do jq.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li><code>-r</code> para tirar as aspas.</li>
+<li>Interpolação com <code>\( )</code>.</li>
+<li><code>join</code>, <code>split</code>, <code>+</code> e <code>tostring</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: sair do JSON para texto</h2>
+<p>O jq devolve JSON: textos aparecem entre aspas. Isso é ótimo para mandar para outro programa que lê JSON, mas ruim para ler ou para passar ao <code>sort</code>, ao <code>awk</code> e a um script. A opção <code>-r</code> (<em>raw</em>, “cru”) tira as aspas. E as strings do jq têm truques próprios: interpolação, <code>join</code>, maiúsculas, <code>split</code>.</p>
+<hr>
+<h2>1. <code>-r</code>: sem aspas</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq '.[].nome' usuarios.json
+&quot;Ana Souza&quot;
+&quot;Bruno Lima&quot;
+&quot;Carla Dias&quot;
+&quot;Diego Rocha&quot;
+$ jq -r '.[].nome' usuarios.json
+Ana Souza
+Bruno Lima
+Carla Dias
+Diego Rocha
+$</pre>
+<p>Sem aspas, a saída combina com as ferramentas dos níveis anteriores:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '.[].cidade' usuarios.json | sort | uniq -c
+      1 Belo Horizonte
+      1 Rio de Janeiro
+      2 São Paulo
+$</pre>
+<hr>
+<h2>2. Interpolação: <code>\( )</code></h2>
+<p>Dentro de um texto do jq, <code>\(filtro)</code> é trocado pelo resultado do filtro, como o <code>$variavel</code> do Bash:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '.[] | &quot;\(.nome) tem \(.idade) anos e mora em \(.cidade)&quot;' usuarios.json
+Ana Souza tem 28 anos e mora em São Paulo
+Bruno Lima tem 35 anos e mora em Rio de Janeiro
+Carla Dias tem 22 anos e mora em Belo Horizonte
+Diego Rocha tem 41 anos e mora em São Paulo
+$</pre>
+<dl class="anatomy"><dt>&quot;...&quot;</dt><dd>um texto do jq, entre aspas duplas.</dd><dt>\(.nome)</dt><dd>troca pelo nome do item.</dd><dt>\(.idade)</dt><dd>números entram sem conversão.</dd></dl>
+<hr>
+<h2>3. <code>join</code>, <code>split</code>, maiúsculas</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '.cores | join(&quot;, &quot;)' produto.json
+azul, verde, preto
+$ jq -r '.[] | &quot;\(.nome): \(.tags | join(&quot;/&quot;))&quot;' usuarios.json
+Ana Souza: admin/vendas
+Bruno Lima: vendas
+Carla Dias: 
+Diego Rocha: suporte
+$ jq -c 'split(&quot; &quot;)' &lt;&lt;&lt; '&quot;Ana Souza&quot;'
+[&quot;Ana&quot;,&quot;Souza&quot;]
+$ jq -r '.[].nome | ascii_upcase' usuarios.json
+ANA SOUZA
+BRUNO LIMA
+CARLA DIAS
+DIEGO ROCHA
+$</pre>
+<p>O <code>ascii_upcase</code> só mexe nas letras sem acento (por isso o nome tem “ascii”). Para acentos, passe o resultado para o <code>sed 's/.*/\U&amp;/'</code> ou o <code>awk</code>.</p>
+<hr>
+<h2>4. Juntar textos com <code>+</code></h2>
+<p><code>+</code> emenda textos. Números precisam virar texto antes, com <code>tostring</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '.[] | .nome + &quot; (&quot; + (.idade | tostring) + &quot;)&quot;' usuarios.json
+Ana Souza (28)
+Bruno Lima (35)
+Carla Dias (22)
+Diego Rocha (41)
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Texto + número</strong>
+<p>Sem o <code>tostring</code>, somar texto com número é erro (“string and number cannot be added”: texto e número não podem ser somados):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '.[0] | .nome + &quot; - &quot; + .idade' usuarios.json
+jq: error (at usuarios.json:6): string (&quot;Ana Souza - &quot;) and number (28) cannot be added
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>jq -r '.[].nome'</code></td><td>sem aspas.</td></tr>
+<tr><td><code>&quot;\(.nome) tem \(.idade)&quot;</code></td><td>interpolação.</td></tr>
+<tr><td><code>join(&quot;, &quot;)</code></td><td>junta a lista.</td></tr>
+<tr><td><code>split(&quot; &quot;)</code></td><td>quebra o texto.</td></tr>
+<tr><td><code>tostring</code></td><td>número para texto.</td></tr>
+<tr><td><code>ascii_upcase</code></td><td>maiúsculas (sem acentos).</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Sem aspas</h3><p>Qual opção tira as aspas dos textos?</p><div class="ex-code">jq <input data-answer="-r" aria-label="opção"> '.[].nome' usuarios.json</div></div><div class="exercise"><h3>2. Juntar a lista</h3><p>Qual função junta uma lista de textos com um separador?</p><div class="ex-code">jq -r '.cores | <input data-answer="join" aria-label="função">(&quot;, &quot;)' produto.json</div></div><div class="mc" data-answer="2"><p class="mc-q">3. Dentro de um texto do jq, <code>\(.nome)</code>:</p>
+<label><input type="radio" name="q3"> é um erro</label>
+<label><input type="radio" name="q3"> é trocado pelo valor de .nome</label>
+<label><input type="radio" name="q3"> imprime “.nome”</label>
+<label><input type="radio" name="q3"> é um comentário</label></div><div class="mc" data-answer="2"><p class="mc-q">4. Para emendar um número num texto com <code>+</code>, antes use:</p>
+<label><input type="radio" name="q4"> <code>tonumber</code></label>
+<label><input type="radio" name="q4"> <code>tostring</code></label>
+<label><input type="radio" name="q4"> <code>-r</code></label>
+<label><input type="radio" name="q4"> <code>join</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:jq -r;;outre:^Bruno$;;outre:^Ana$">
+<p class="try-task"><strong>Missão:</strong> mostre o nome de cada cliente de <code>pedidos.json</code>, sem aspas.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq -r '.pedidos[].cliente' pedidos.json
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Bruno
+Carla
+Diego
+Ana
+</pre>
+</div><div class="trycmd" data-goal="src:\\\(;;out:Pedido 1042: pago;;out:Pedido 1045: cancelado">
+<p class="try-task"><strong>Missão:</strong> com interpolação, mostre cada pedido no formato <code>Pedido 1042: pago</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq -r '.pedidos[] | &quot;Pedido \(.id): \(.status)&quot;' pedidos.json
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Pedido 1042: pago
+Pedido 1043: pendente
+Pedido 1044: pago
+Pedido 1045: cancelado
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>-r</code> é o que liga o jq ao resto do terminal.</li>
+<li><code>\( )</code> monta textos com valores.</li>
+<li>Texto + número pede <code>tostring</code>.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

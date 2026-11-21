@@ -78,6 +78,8 @@ def M(bid, tarefa, cmds, goal, script=""):
     registra(bid, cmds)
     if MODO != "paginas":
         return ""
+    # nas metas out:/erro: (texto literal), \" vira " (atalho para escrever aspas em r"...")
+    goal = ";;".join((m.replace('\\"', '"') if m.split(":", 1)[0] in ("out", "erro") else m) for m in goal.split(";;"))
     saida = saida_de(bid)
     # pré-conferência: as metas out/erro/outre têm de bater com a saída real
     for meta in goal.split(";;"):

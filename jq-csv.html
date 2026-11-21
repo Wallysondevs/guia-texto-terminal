@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JSON para CSV com jq: @csv e @tsv | Guia Texto no Terminal</title>
+<meta name="description" content="Converter JSON em CSV e TSV com jq: @csv, @tsv, cabeçalho, uma linha por item com as $p e gravar em arquivo.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>JSON para CSV (<span class="hl">@csv</span> e <span class="hl">@tsv</span>)</h1>
+
+<p class="intro">Transformar JSON em planilha é uma das tarefas mais pedidas. Os formatadores <code>@csv</code> e <code>@tsv</code> fazem isso.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li><code>@csv</code> e <code>@tsv</code> com <code>-r</code>.</li>
+<li>Cabeçalho e uma linha por item.</li>
+<li>Variáveis com <code>as $p</code> para listas dentro de listas.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: do JSON para a planilha</h2>
+<p>Os formatadores <code>@csv</code> e <code>@tsv</code> transformam uma <strong>lista</strong> em uma linha de CSV (separada por vírgula, com textos entre aspas) ou TSV (separada por tabulação). Com <code>-r</code>, a linha sai pronta para gravar num arquivo e abrir na planilha.</p>
+<hr>
+<h2>1. <code>@csv</code></h2>
+<p>Para cada usuário, monte uma lista com os campos na ordem das colunas e passe por <code>@csv</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '.[] | [.id, .nome, .cidade, .idade] | @csv' usuarios.json
+1,&quot;Ana Souza&quot;,&quot;São Paulo&quot;,28
+2,&quot;Bruno Lima&quot;,&quot;Rio de Janeiro&quot;,35
+3,&quot;Carla Dias&quot;,&quot;Belo Horizonte&quot;,22
+4,&quot;Diego Rocha&quot;,&quot;São Paulo&quot;,41
+$</pre>
+<dl class="anatomy"><dt>.[]</dt><dd>cada usuário.</dd><dt>[.id, .nome, .cidade, .idade]</dt><dd>uma lista: as colunas, na ordem.</dd><dt>@csv</dt><dd>vira uma linha de CSV.</dd><dt>-r</dt><dd>sem as aspas externas do JSON.</dd></dl>
+<hr>
+<h2>2. Com cabeçalho</h2>
+<p>A vírgula do jq produz primeiro a lista do cabeçalho, depois as linhas:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '[&quot;id&quot;, &quot;nome&quot;, &quot;email&quot;], (.[] | [.id, .nome, .email]) | @csv' usuarios.json
+&quot;id&quot;,&quot;nome&quot;,&quot;email&quot;
+1,&quot;Ana Souza&quot;,&quot;ana@exemplo.com&quot;
+2,&quot;Bruno Lima&quot;,&quot;bruno@exemplo.com&quot;
+3,&quot;Carla Dias&quot;,
+4,&quot;Diego Rocha&quot;,&quot;diego@exemplo.com&quot;
+$</pre>
+<p>Repare: o <code>email</code> nulo da Carla virou um campo vazio.</p>
+<hr>
+<h2>3. <code>@tsv</code></h2>
+<p>TSV usa tabulação e não põe aspas: ótimo para o <code>awk</code> e para o <code>column</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '.pedidos[] | [.id, .cliente, .status] | @tsv' pedidos.json
+1042	Bruno	pago
+1043	Carla	pendente
+1044	Diego	pago
+1045	Ana	cancelado
+$ jq -r '.pedidos[] | [.id, .cliente, .status] | @tsv' pedidos.json | awk -F'\t' '$3 == &quot;pago&quot; {print $2}'
+Bruno
+Diego
+$</pre>
+<hr>
+<h2>4. Uma linha por item de pedido</h2>
+<p>Para listas dentro de listas, guarde o pai numa variável com <code>as $p</code> e abra os filhos:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '.pedidos[] as $p | $p.itens[] | [$p.id, $p.cliente, .produto, .qtd, .preco] | @csv' pedidos.json
+1042,&quot;Bruno&quot;,&quot;caderno&quot;,2,12.5
+1042,&quot;Bruno&quot;,&quot;caneta&quot;,5,2.0
+1043,&quot;Carla&quot;,&quot;mochila&quot;,1,89.9
+1044,&quot;Diego&quot;,&quot;estojo&quot;,1,15.0
+1044,&quot;Diego&quot;,&quot;caneta&quot;,3,2.0
+1045,&quot;Ana&quot;,&quot;caderno&quot;,4,12.5
+$</pre>
+<hr>
+<h2>5. Gravar e conferir</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '.[] | [.id, .nome, .cidade] | @csv' usuarios.json &gt; usuarios.csv
+$ wc -l usuarios.csv
+4 usuarios.csv
+$ awk -F, '{print $2}' usuarios.csv
+&quot;Ana Souza&quot;
+&quot;Bruno Lima&quot;
+&quot;Carla Dias&quot;
+&quot;Diego Rocha&quot;
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>@csv num objeto</strong>
+<p>O <code>@csv</code> só aceita listas (“cannot be csv-formatted, only array”: não pode virar CSV, só lista):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '.[0] | @csv' usuarios.json
+jq: error (at usuarios.json:6): object ({&quot;id&quot;:1,&quot;no...) cannot be csv-formatted, only array
+$</pre>
+</div>
+<div class="cenario"><strong>Lista dentro da linha</strong>
+<p>Cada coluna tem de ser um valor simples. A lista de <code>tags</code> não cabe numa célula (“is not valid in a csv row”: não vale numa linha de CSV):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '.[0] | [.nome, .tags] | @csv' usuarios.json
+jq: error (at usuarios.json:6): array ([&quot;admin&quot;,&quot;v...) is not valid in a csv row
+$</pre>
+<p>Junte antes: <code>(.tags | join(";"))</code>.</p></div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>[.a, .b] | @csv</code></td><td>linha CSV.</td></tr>
+<tr><td><code>[.a, .b] | @tsv</code></td><td>linha TSV.</td></tr>
+<tr><td><code>[&quot;a&quot;,&quot;b&quot;], (.[] | [.a,.b]) | @csv</code></td><td>com cabeçalho.</td></tr>
+<tr><td><code>.x[] as $p | $p.y[]</code></td><td>guarda o pai em $p.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. CSV</h3><p>Qual formatador gera CSV?</p><div class="ex-code">jq -r '.[] | [.id, .nome] | <input data-answer="@csv" aria-label="formatador">' usuarios.json</div></div><div class="exercise"><h3>2. TSV</h3><p>Qual formatador separa por tabulação?</p><div class="ex-code">jq -r '.[] | [.id, .nome] | <input data-answer="@tsv" aria-label="formatador">' usuarios.json</div></div><div class="mc" data-answer="2"><p class="mc-q">3. O que o <code>@csv</code> recebe?</p>
+<label><input type="radio" name="q3"> um objeto</label>
+<label><input type="radio" name="q3"> uma lista de valores simples</label>
+<label><input type="radio" name="q3"> um texto</label>
+<label><input type="radio" name="q3"> qualquer coisa</label></div><div class="mc" data-answer="2"><p class="mc-q">4. Por que usar <code>-r</code> com <code>@csv</code>?</p>
+<label><input type="radio" name="q4"> Para ordenar</label>
+<label><input type="radio" name="q4"> Para a linha sair sem as aspas externas do JSON</label>
+<label><input type="radio" name="q4"> Para ir mais rápido</label>
+<label><input type="radio" name="q4"> Não precisa</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:@csv;;src:-r;;outre:^1042,\&quot;pago\&quot;$;;outre:^1045,\&quot;cancelado\&quot;$">
+<p class="try-task"><strong>Missão:</strong> gere um CSV com <code>id</code> e <code>status</code> de cada pedido de <code>pedidos.json</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq -r '.pedidos[] | [.id, .status] | @csv' pedidos.json
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+1042,&quot;pago&quot;
+1043,&quot;pendente&quot;
+1044,&quot;pago&quot;
+1045,&quot;cancelado&quot;
+</pre>
+</div><div class="trycmd" data-goal="src:@tsv;;outre:^Ana Souza\t28$;;outre:^Diego Rocha\t41$">
+<p class="try-task"><strong>Missão:</strong> gere um TSV com <code>nome</code> e <code>idade</code> de cada usuário.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq -r '.[] | [.nome, .idade] | @tsv' usuarios.json
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Ana Souza	28
+Bruno Lima	35
+Carla Dias	22
+Diego Rocha	41
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>@csv</code> e <code>@tsv</code> recebem uma lista.</li>
+<li>Sempre com <code>-r</code>.</li>
+<li>Listas dentro da linha precisam de <code>join</code>.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

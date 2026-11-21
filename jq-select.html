@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O pipe do jq e o select | Guia Texto no Terminal</title>
+<meta name="description" content="O pipe interno do jq e o select para filtrar: comparações, and, or, not, test com regex e any.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>O <span class="hl">|</span> do jq e <span class="hl">select</span></h1>
+
+<p class="intro">Dentro do jq também existe pipe, e o <code>select</code> filtra itens por condição. Juntos, são o <code>grep</code> do JSON.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>O <code>|</code> dentro do programa jq.</li>
+<li><code>select</code> com comparações, <code>and</code>, <code>or</code>, <code>not</code>.</li>
+<li>Regex com <code>test</code> e listas com <code>any</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: o pipe de dentro e o filtro</h2>
+<p>Dentro do programa jq também existe <code>|</code>: a saída de um filtro vira a entrada do próximo, igual ao pipe do Bash. E o <code>select(condição)</code> deixa passar só os itens em que a condição é verdadeira, o <code>grep</code> do JSON.</p>
+<hr>
+<h2>1. O <code>|</code> do jq</h2>
+<p><code>.[] | .nome</code> é o mesmo que <code>.[].nome</code>: abra a lista e, de cada item, pegue o nome. Com o pipe fica mais fácil de ler quando o caminho cresce:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq '.[] | .nome' usuarios.json
+&quot;Ana Souza&quot;
+&quot;Bruno Lima&quot;
+&quot;Carla Dias&quot;
+&quot;Diego Rocha&quot;
+$ jq '.pedidos[] | .itens[] | .produto' pedidos.json | sort -u
+&quot;caderno&quot;
+&quot;caneta&quot;
+&quot;estojo&quot;
+&quot;mochila&quot;
+$</pre>
+<hr>
+<h2>2. <code>select</code>: filtrar</h2>
+<p>Só os usuários ativos; só os maiores de 30; só os de São Paulo:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq '.[] | select(.ativo) | .nome' usuarios.json
+&quot;Ana Souza&quot;
+&quot;Carla Dias&quot;
+&quot;Diego Rocha&quot;
+$ jq '.[] | select(.idade &gt; 30) | .nome' usuarios.json
+&quot;Bruno Lima&quot;
+&quot;Diego Rocha&quot;
+$ jq '.[] | select(.cidade == &quot;São Paulo&quot;) | .nome' usuarios.json
+&quot;Ana Souza&quot;
+&quot;Diego Rocha&quot;
+$</pre>
+<dl class="anatomy"><dt>.[]</dt><dd>cada usuário.</dd><dt>select(.idade &gt; 30)</dt><dd>deixa passar só quem tem idade maior que 30.</dd><dt>.nome</dt><dd>dos que passaram, o nome.</dd></dl>
+<hr>
+<h2>3. <code>and</code>, <code>or</code>, <code>not</code></h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq '.[] | select(.ativo and .idade &lt; 30) | .nome' usuarios.json
+&quot;Ana Souza&quot;
+&quot;Carla Dias&quot;
+$ jq '.pedidos[] | select(.status == &quot;pago&quot; or .status == &quot;pendente&quot;) | .id' pedidos.json
+1042
+1043
+1044
+$ jq '.[] | select(.ativo | not) | .nome' usuarios.json
+&quot;Bruno Lima&quot;
+$</pre>
+<hr>
+<h2>4. Regex: <code>test</code></h2>
+<p><code>test("regex")</code> é verdadeiro se o texto casa. Com <code>"i"</code> no segundo argumento, sem diferenciar maiúsculas:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq '.[] | select(.nome | test(&quot;^[AB]&quot;)) | .nome' usuarios.json
+&quot;Ana Souza&quot;
+&quot;Bruno Lima&quot;
+$ jq '.[] | select(.cidade | test(&quot;paulo&quot;; &quot;i&quot;)) | .id' usuarios.json
+1
+4
+$</pre>
+<hr>
+<h2>5. Filtrar dentro de listas</h2>
+<p>Os pedidos que têm pelo menos um item de caneta, usando <code>any</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq '.pedidos[] | select(any(.itens[]; .produto == &quot;caneta&quot;)) | .cliente' pedidos.json
+&quot;Bruno&quot;
+&quot;Diego&quot;
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>select sem parênteses</strong>
+<p>A condição do <code>select</code> vai entre parênteses. Sem eles, o jq procura uma função <code>select</code> sem argumentos (<code>select/0</code>), que não existe:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq '.[] | select .ativo' usuarios.json
+jq: error: select/0 is not defined at &lt;top-level&gt;, line 1:
+.[] | select .ativo      
+jq: 1 compile error
+$</pre>
+</div>
+<div class="cenario"><strong>Um = só</strong>
+<p>Em jq, comparar é <code>==</code>. Um <code>=</code> só é atribuição: o resultado dela é um objeto, que conta como verdadeiro, então <strong>todos</strong> passaram no filtro (e a cidade nem mudou na saída, porque o <code>select</code> devolve o item original):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -c '.[] | select(.cidade = &quot;Recife&quot;) | {nome, cidade}' usuarios.json
+{&quot;nome&quot;:&quot;Ana Souza&quot;,&quot;cidade&quot;:&quot;São Paulo&quot;}
+{&quot;nome&quot;:&quot;Bruno Lima&quot;,&quot;cidade&quot;:&quot;Rio de Janeiro&quot;}
+{&quot;nome&quot;:&quot;Carla Dias&quot;,&quot;cidade&quot;:&quot;Belo Horizonte&quot;}
+{&quot;nome&quot;:&quot;Diego Rocha&quot;,&quot;cidade&quot;:&quot;São Paulo&quot;}
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>.[] | .nome</code></td><td>o nome de cada item.</td></tr>
+<tr><td><code>select(.ativo)</code></td><td>só os ativos.</td></tr>
+<tr><td><code>select(.idade &gt; 30)</code></td><td>idade maior que 30.</td></tr>
+<tr><td><code>select(.a == &quot;x&quot; or .b)</code></td><td>ou.</td></tr>
+<tr><td><code>select(.nome | test(&quot;^A&quot;))</code></td><td>regex.</td></tr>
+<tr><td><code>select(.x | not)</code></td><td>negação.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Filtrar</h3><p>Qual função deixa passar só os itens em que a condição é verdadeira?</p><div class="ex-code">jq '.[] | <input data-answer="select" aria-label="função">(.ativo)' usuarios.json</div></div><div class="exercise"><h3>2. Comparar</h3><p>Qual operador compara igualdade?</p><div class="ex-code">select(.status <input data-answer="==" aria-label="operador"> &quot;pago&quot;)</div></div><div class="mc" data-answer="2"><p class="mc-q">3. <code>.[] | .nome</code> é o mesmo que:</p>
+<label><input type="radio" name="q3"> <code>.nome[]</code></label>
+<label><input type="radio" name="q3"> <code>.[].nome</code></label>
+<label><input type="radio" name="q3"> <code>.nome</code></label>
+<label><input type="radio" name="q3"> <code>[.nome]</code></label></div><div class="mc" data-answer="2"><p class="mc-q">4. Para testar uma regex num texto, use:</p>
+<label><input type="radio" name="q4"> <code>grep</code></label>
+<label><input type="radio" name="q4"> <code>test("regex")</code></label>
+<label><input type="radio" name="q4"> <code>~ /regex/</code></label>
+<label><input type="radio" name="q4"> <code>=~</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:select;;src:pago;;outre:^1042$;;outre:^1044$">
+<p class="try-task"><strong>Missão:</strong> mostre o <code>id</code> dos pedidos com status <code>pago</code> em <code>pedidos.json</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq '.pedidos[] | select(.status == &quot;pago&quot;) | .id' pedidos.json
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+1042
+1044
+</pre>
+</div><div class="trycmd" data-goal="src:select\(\.idade\s*&lt;\s*30\);;outre:^\&quot;Ana Souza\&quot;$;;outre:^\&quot;Carla Dias\&quot;$">
+<p class="try-task"><strong>Missão:</strong> mostre o nome dos usuários com idade menor que 30.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq '.[] | select(.idade &lt; 30) | .nome' usuarios.json
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+&quot;Ana Souza&quot;
+&quot;Carla Dias&quot;
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>|</code> no jq passa o resultado adiante.</li>
+<li><code>select</code> deixa passar só o que é verdadeiro.</li>
+<li>Compare com <code>==</code>, nunca com <code>=</code>.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

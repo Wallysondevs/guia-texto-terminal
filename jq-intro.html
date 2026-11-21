@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O que é o jq: o filtro . e a opção -c | Guia Texto no Terminal</title>
+<meta name="description" content="Primeiros passos com o jq 1.7: o que é JSON, o filtro ., saída compacta com -c, ler do pipe e os erros de JSON quebrado.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>O que é o <span class="hl">jq</span> (<span class="hl">.</span> e <span class="hl">-c</span>)</h1>
+
+<p class="intro">O <code>jq</code> entende JSON, o formato das APIs. Esta aula mostra o filtro mais simples, o <code>.</code>, que já deixa qualquer JSON legível.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Objetos, listas e valores do JSON.</li>
+<li>O filtro <code>.</code> e a opção <code>-c</code>.</li>
+<li>Ler do pipe e entender os erros de JSON inválido.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: JSON é texto com estrutura</h2>
+<p>JSON é o formato das APIs e de muitos arquivos de configuração: <strong>objetos</strong> entre chaves (<code>{"nome": "caderno"}</code>), <strong>listas</strong> (arrays) entre colchetes (<code>["azul", "verde"]</code>), textos entre aspas, números, <code>true</code>, <code>false</code> e <code>null</code>. O <code>sed</code> e o <code>awk</code> enxergam JSON como linhas soltas; o <code>jq</code> entende a estrutura e navega por ela.</p>
+<hr>
+<h2>1. O filtro <code>.</code>: mostrar bonito</h2>
+<p>O programa mais simples do jq é <code>.</code> (“a entrada inteira”). Ele lê o JSON e devolve formatado, com recuo:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cat produto.json
+{&quot;nome&quot;: &quot;caderno&quot;, &quot;preco&quot;: 12.5, &quot;estoque&quot;: {&quot;loja&quot;: 40, &quot;deposito&quot;: 120}, &quot;cores&quot;: [&quot;azul&quot;, &quot;verde&quot;, &quot;preto&quot;]}
+$ jq . produto.json
+{
+  &quot;nome&quot;: &quot;caderno&quot;,
+  &quot;preco&quot;: 12.5,
+  &quot;estoque&quot;: {
+    &quot;loja&quot;: 40,
+    &quot;deposito&quot;: 120
+  },
+  &quot;cores&quot;: [
+    &quot;azul&quot;,
+    &quot;verde&quot;,
+    &quot;preto&quot;
+  ]
+}
+$</pre>
+<dl class="anatomy"><dt>jq</dt><dd>o programa.</dd><dt>'.'</dt><dd>o filtro: a entrada inteira, sem mudança.</dd><dt>produto.json</dt><dd>o arquivo JSON.</dd></dl>
+<p>Na sua tela, o jq ainda pinta as chaves, os textos e os números com cores diferentes. A coleta foi gravada sem terminal, por isso as caixas do guia não têm cor.</p>
+<hr>
+<h2>2. <code>-c</code>: tudo numa linha</h2>
+<p>O contrário: <code>-c</code> (<em>compact</em>) devolve cada resultado numa linha só, ótimo para passar adiante num pipe:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -c . usuarios.json | cut -c 1-70
+[{&quot;id&quot;:1,&quot;nome&quot;:&quot;Ana Souza&quot;,&quot;email&quot;:&quot;ana@exemplo.com&quot;,&quot;idade&quot;:28,&quot;cida
+$</pre>
+<hr>
+<h2>3. Do pipe</h2>
+<p>Como as outras ferramentas, o jq lê do <code>|</code>. Na vida real, a entrada costuma vir de uma API, com <code>curl -s https://… | jq .</code>. Neste guia, tudo é local: os arquivos fazem o papel da resposta da API.</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ echo '{&quot;loja&quot;: &quot;Papelaria&quot;, &quot;aberta&quot;: true}' | jq .
+{
+  &quot;loja&quot;: &quot;Papelaria&quot;,
+  &quot;aberta&quot;: true
+}
+$ cat pedidos.json | jq -c '.loja'
+&quot;Papelaria da Ana&quot;
+$</pre>
+<div class="note"><strong>Mensagens do jq em inglês</strong><p>O jq não tem tradução: mesmo num Linux em português, as mensagens de erro saem em inglês. Elas aparecem aqui exatamente como o jq escreveu, com a explicação em português.</p></div>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>JSON quebrado</strong>
+<p>O <code>quebrado.json</code> termina no meio, sem fechar a chave. O jq diz onde a leitura parou (“Unfinished JSON term at EOF”: termo JSON inacabado no fim do arquivo):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq . quebrado.json
+jq: parse error: Unfinished JSON term at EOF at line 2, column 0
+$</pre>
+</div>
+<div class="cenario"><strong>Esqueceu o filtro</strong>
+<p>Com arquivo, o jq precisa do filtro antes do nome. Sem ele, o jq acha que <code>produto.json</code> é o programa e lê <code>produto</code> como o nome de uma função sem argumentos (<code>produto/0</code>) que não existe (“is not defined”: não está definida):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq produto.json
+jq: error: produto/0 is not defined at &lt;top-level&gt;, line 1:
+produto.json
+jq: 1 compile error
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>jq . arq.json</code></td><td>formata o JSON.</td></tr>
+<tr><td><code>jq -c . arq.json</code></td><td>uma linha por resultado.</td></tr>
+<tr><td><code>cmd | jq .</code></td><td>formata a saída de outro comando.</td></tr>
+<tr><td><code>jq --version</code></td><td>a versão.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. A entrada inteira</h3><p>Qual filtro devolve a entrada inteira, formatada?</p><div class="ex-code">jq '<input data-answer="." aria-label="filtro">' produto.json</div></div><div class="exercise"><h3>2. Compacto</h3><p>Qual opção põe cada resultado numa linha?</p><div class="ex-code">jq <input data-answer="-c" aria-label="opção"> . usuarios.json</div></div><div class="mc" data-answer="2"><p class="mc-q">3. Em JSON, o que fica entre colchetes <code>[ ]</code>?</p>
+<label><input type="radio" name="q3"> um objeto</label>
+<label><input type="radio" name="q3"> uma lista (array)</label>
+<label><input type="radio" name="q3"> um texto</label>
+<label><input type="radio" name="q3"> um comentário</label></div><div class="mc" data-answer="2"><p class="mc-q">4. As mensagens de erro do jq saem:</p>
+<label><input type="radio" name="q4"> em português, como as do sed</label>
+<label><input type="radio" name="q4"> em inglês, porque o jq não tem tradução</label>
+<label><input type="radio" name="q4"> em espanhol</label>
+<label><input type="radio" name="q4"> não existem</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\bjq\b;;out:&quot;estoque&quot;: {;;out:&quot;deposito&quot;: 120">
+<p class="try-task"><strong>Missão:</strong> mostre <code>produto.json</code> formatado com o filtro <code>.</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq . produto.json
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+{
+  &quot;nome&quot;: &quot;caderno&quot;,
+  &quot;preco&quot;: 12.5,
+  &quot;estoque&quot;: {
+    &quot;loja&quot;: 40,
+    &quot;deposito&quot;: 120
+  },
+  &quot;cores&quot;: [
+    &quot;azul&quot;,
+    &quot;verde&quot;,
+    &quot;preto&quot;
+  ]
+}
+</pre>
+</div><div class="trycmd" data-goal="src:jq -c;;outre:^\{\&quot;loja\&quot;:\&quot;Papelaria da Ana\&quot;,\&quot;atualizado\&quot;:\&quot;2026-03-05\&quot;">
+<p class="try-task"><strong>Missão:</strong> mostre <code>pedidos.json</code> compacto, numa linha só.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq -c . pedidos.json
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+{&quot;loja&quot;:&quot;Papelaria da Ana&quot;,&quot;atualizado&quot;:&quot;2026-03-05&quot;,&quot;pedidos&quot;:[{&quot;id&quot;:1042,&quot;cliente&quot;:&quot;Bruno&quot;,&quot;status&quot;:&quot;pago&quot;,&quot;itens&quot;:[{&quot;produto&quot;:&quot;caderno&quot;,&quot;qtd&quot;:2,&quot;preco&quot;:12.5},{&quot;produto&quot;:&quot;caneta&quot;,&quot;qtd&quot;:5,&quot;preco&quot;:2.0}]},{&quot;id&quot;:1043,&quot;cliente&quot;:&quot;Carla&quot;,&quot;status&quot;:&quot;pendente&quot;,&quot;itens&quot;:[{&quot;produto&quot;:&quot;mochila&quot;,&quot;qtd&quot;:1,&quot;preco&quot;:89.9}]},{&quot;id&quot;:1044,&quot;cliente&quot;:&quot;Diego&quot;,&quot;status&quot;:&quot;pago&quot;,&quot;itens&quot;:[{&quot;produto&quot;:&quot;estojo&quot;,&quot;qtd&quot;:1,&quot;preco&quot;:15.0},{&quot;produto&quot;:&quot;caneta&quot;,&quot;qtd&quot;:3,&quot;preco&quot;:2.0}]},{&quot;id&quot;:1045,&quot;cliente&quot;:&quot;Ana&quot;,&quot;status&quot;:&quot;cancelado&quot;,&quot;itens&quot;:[{&quot;produto&quot;:&quot;caderno&quot;,&quot;qtd&quot;:4,&quot;preco&quot;:12.5}]}]}
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>.</code> é a entrada inteira.</li>
+<li><code>-c</code> compacta.</li>
+<li>As mensagens do jq saem em inglês.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

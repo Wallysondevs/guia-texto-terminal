@@ -835,3 +835,339 @@ awk -F, 'BEGIN {OFS = ","; print "vendedor,total"} $3 == "mochila" {print $2, $4
 ### csv-m2
 echo '9,"Lima, Bruno",35' | awk -v FPAT='([^,]*)|("[^"]*")' '{print $2}'
 
+### jqi-ponto
+cat produto.json
+jq . produto.json
+
+### jqi-c
+jq -c . usuarios.json | cut -c 1-70
+
+### jqi-pipe
+echo '{"loja": "Papelaria", "aberta": true}' | jq .
+cat pedidos.json | jq -c '.loja'
+
+### jqi-erro
+jq . quebrado.json
+
+### jqi-erro2
+jq produto.json
+
+### jqi-m1
+jq . produto.json
+
+### jqi-m2
+jq -c . pedidos.json
+
+### jqc-um
+jq '.nome' produto.json
+jq '.preco' produto.json
+jq '.cores' produto.json
+
+### jqc-aninhado
+jq '.estoque' produto.json
+jq '.estoque.deposito' produto.json
+jq '.pedidos[0].itens[0].produto' pedidos.json
+
+### jqc-virgula
+jq '.nome, .preco, .estoque.loja' produto.json
+
+### jqc-null
+jq '.peso' produto.json
+
+### jqc-especial
+echo '{"data-de-entrega": "2026-03-10"}' | jq '."data-de-entrega"'
+echo '{"data-de-entrega": "2026-03-10"}' | jq '.["data-de-entrega"]'
+
+### jqc-erro
+jq '.estoque.loja.x' produto.json
+
+### jqc-erro2
+echo '{"data-de-entrega": "x"}' | jq '.data-de-entrega'
+
+### jqc-m1
+jq '.estoque.deposito' produto.json
+
+### jqc-m2
+jq '.loja, .atualizado' pedidos.json
+
+### jqa-pos
+jq '.[0]' usuarios.json
+jq '.[-1].nome' usuarios.json
+
+### jqa-fatia
+jq -c '.[1:3]' produto.json
+jq -c '.cores[1:]' produto.json
+jq -c '.cores[:2]' produto.json
+
+### jqa-cada
+jq '.cores[]' produto.json
+jq '.[].nome' usuarios.json
+jq '.pedidos[].cliente' pedidos.json
+
+### jqa-dupla
+jq '.pedidos[].itens[].produto' pedidos.json
+
+### jqa-objeto
+jq '.estoque[]' produto.json
+
+### jqa-erro
+jq '.[0]' produto.json
+
+### jqa-erro2
+jq '.nome[]' produto.json
+
+### jqa-m1
+jq '.[].cidade' usuarios.json
+
+### jqa-m2
+jq '.pedidos[].id' pedidos.json
+
+### jqs-pipe
+jq '.[] | .nome' usuarios.json
+jq '.pedidos[] | .itens[] | .produto' pedidos.json | sort -u
+
+### jqs-select
+jq '.[] | select(.ativo) | .nome' usuarios.json
+jq '.[] | select(.idade > 30) | .nome' usuarios.json
+jq '.[] | select(.cidade == "São Paulo") | .nome' usuarios.json
+
+### jqs-logica
+jq '.[] | select(.ativo and .idade < 30) | .nome' usuarios.json
+jq '.pedidos[] | select(.status == "pago" or .status == "pendente") | .id' pedidos.json
+jq '.[] | select(.ativo | not) | .nome' usuarios.json
+
+### jqs-test
+jq '.[] | select(.nome | test("^[AB]")) | .nome' usuarios.json
+jq '.[] | select(.cidade | test("paulo"; "i")) | .id' usuarios.json
+
+### jqs-any
+jq '.pedidos[] | select(any(.itens[]; .produto == "caneta")) | .cliente' pedidos.json
+
+### jqs-erro
+jq '.[] | select .ativo' usuarios.json
+
+### jqs-erro2
+jq -c '.[] | select(.cidade = "Recife") | {nome, cidade}' usuarios.json
+
+### jqs-m1
+jq '.pedidos[] | select(.status == "pago") | .id' pedidos.json
+
+### jqs-m2
+jq '.[] | select(.idade < 30) | .nome' usuarios.json
+
+### jqm-map
+jq -c 'map(.nome)' usuarios.json
+jq -c '[.[] | .nome]' usuarios.json
+jq -c 'map(.idade + 1)' usuarios.json
+
+### jqm-length
+jq 'length' usuarios.json
+jq '.pedidos | length' pedidos.json
+jq '.[] | .tags | length' usuarios.json
+jq '.nome | length' produto.json
+
+### jqm-keys
+jq -c 'keys' produto.json
+jq -c '.[0] | keys' usuarios.json
+jq 'has("preco"), has("peso")' produto.json
+
+### jqm-add
+jq 'map(.idade) | add' usuarios.json
+jq 'map(.idade) | add / length' usuarios.json
+jq 'map(.idade) | min, max' usuarios.json
+
+### jqm-mapsel
+jq 'map(select(.ativo)) | length' usuarios.json
+jq -c '.pedidos | map(select(.status != "cancelado") | .id)' pedidos.json
+
+### jqm-erro
+jq '.nome | keys' produto.json
+
+### jqm-erro2
+jq 'map(.nome)' <<< '{"a": 40, "b": 120}'
+
+### jqm-m1
+jq '.pedidos | length' pedidos.json
+
+### jqm-m2
+jq -c 'map(.email)' usuarios.json
+
+### jqr-r
+jq '.[].nome' usuarios.json
+jq -r '.[].nome' usuarios.json
+
+### jqr-combo
+jq -r '.[].cidade' usuarios.json | sort | uniq -c
+
+### jqr-interp
+jq -r '.[] | "\(.nome) tem \(.idade) anos e mora em \(.cidade)"' usuarios.json
+
+### jqr-join
+jq -r '.cores | join(", ")' produto.json
+jq -r '.[] | "\(.nome): \(.tags | join("/"))"' usuarios.json
+jq -c 'split(" ")' <<< '"Ana Souza"'
+jq -r '.[].nome | ascii_upcase' usuarios.json
+
+### jqr-mais
+jq -r '.[] | .nome + " (" + (.idade | tostring) + ")"' usuarios.json
+
+### jqr-erro
+jq -r '.[0] | .nome + " - " + .idade' usuarios.json
+
+### jqr-m1
+jq -r '.pedidos[].cliente' pedidos.json
+
+### jqr-m2
+jq -r '.pedidos[] | "Pedido \(.id): \(.status)"' pedidos.json
+
+### jqo-atalho
+jq -c '.[] | {nome, cidade}' usuarios.json
+
+### jqo-calc
+jq -c '.pedidos[] | {pedido: .id, cliente, itens: (.itens | length), total: (.itens | map(.qtd * .preco) | add)}' pedidos.json
+
+### jqo-lista
+jq -c '[.[] | select(.ativo) | .id]' usuarios.json
+jq -c '{loja, clientes: [.pedidos[].cliente]}' pedidos.json
+
+### jqo-chave
+jq -c '.[] | {(.nome): .idade}' usuarios.json
+jq -c 'map({(.nome): .idade}) | add' usuarios.json
+
+### jqo-mudar
+jq -c '.preco = 13.9' produto.json
+jq -c '.estoque.loja += 10 | del(.cores)' produto.json
+
+### jqo-erro
+jq '.[] | {nome .idade}' usuarios.json
+
+### jqo-m1
+jq -c '.[] | {id, email}' usuarios.json
+
+### jqo-m2
+jq -c '[.pedidos[].id]' pedidos.json
+
+### jqord-sort
+jq -r 'sort_by(.idade) | .[] | "\(.idade) \(.nome)"' usuarios.json
+jq -r 'sort_by(.idade) | reverse | .[0].nome' usuarios.json
+
+### jqord-minmax
+jq -r 'min_by(.idade).nome, max_by(.idade).nome' usuarios.json
+
+### jqord-group
+jq -c 'group_by(.cidade) | map({cidade: .[0].cidade, pessoas: length})' usuarios.json
+
+### jqord-status
+jq -r '.pedidos | group_by(.status) | .[] | "\(.[0].status): \(length)"' pedidos.json
+
+### jqord-unique
+jq -c '[.pedidos[].itens[].produto] | unique' pedidos.json
+jq -c 'unique_by(.cidade) | map(.nome)' usuarios.json
+
+### jqord-erro
+jq 'sort_by(.loja)' produto.json
+
+### jqord-erro2
+jq '.[].idade | sort' usuarios.json
+
+### jqord-m1
+jq -r 'sort_by(.idade) | reverse | .[].nome' usuarios.json
+
+### jqord-m2
+jq -c '[.[].cidade] | unique' usuarios.json
+
+### jqcsv-csv
+jq -r '.[] | [.id, .nome, .cidade, .idade] | @csv' usuarios.json
+
+### jqcsv-cab
+jq -r '["id", "nome", "email"], (.[] | [.id, .nome, .email]) | @csv' usuarios.json
+
+### jqcsv-tsv
+jq -r '.pedidos[] | [.id, .cliente, .status] | @tsv' pedidos.json
+jq -r '.pedidos[] | [.id, .cliente, .status] | @tsv' pedidos.json | awk -F'\t' '$3 == "pago" {print $2}'
+
+### jqcsv-itens
+jq -r '.pedidos[] as $p | $p.itens[] | [$p.id, $p.cliente, .produto, .qtd, .preco] | @csv' pedidos.json
+
+### jqcsv-gravar
+jq -r '.[] | [.id, .nome, .cidade] | @csv' usuarios.json > usuarios.csv
+wc -l usuarios.csv
+awk -F, '{print $2}' usuarios.csv
+
+### jqcsv-erro
+jq -r '.[0] | @csv' usuarios.json
+
+### jqcsv-erro2
+jq -r '.[0] | [.nome, .tags] | @csv' usuarios.json
+
+### jqcsv-m1
+jq -r '.pedidos[] | [.id, .status] | @csv' pedidos.json
+
+### jqcsv-m2
+jq -r '.[] | [.nome, .idade] | @tsv' usuarios.json
+
+### jqarg-arg
+jq -r --arg cidade 'São Paulo' '.[] | select(.cidade == $cidade) | .nome' usuarios.json
+status=pago; jq -c --arg s "$status" '[.pedidos[] | select(.status == $s) | .id]' pedidos.json
+
+### jqarg-json
+jq -r --arg min 30 '.[] | select(.idade > $min) | .nome' usuarios.json
+jq -r --argjson min 30 '.[] | select(.idade > $min) | .nome' usuarios.json
+
+### jqarg-ns
+jq -n --arg nome Ana --argjson idade 28 '{nome: $nome, idade: $idade}'
+jq -c '.nome' produto.json usuarios.json 2>&1 | head -2
+jq -s 'length' produto.json pedidos.json
+
+### jqarg-env
+LOJA_CIDADE=Recife jq -n -r '$ENV.LOJA_CIDADE'
+
+### jqarg-api
+cat pedidos.json | jq -r --arg s pago '.pedidos[] | select(.status == $s) | .id'
+
+### jqarg-erro
+jq '.[] | select(.cidade == $cidade)' usuarios.json
+
+### jqarg-erro2
+jq -n --argjson nome Ana '$nome'
+
+### jqarg-m1
+jq -r --arg c 'Rio de Janeiro' '.[] | select(.cidade == $c) | .nome' usuarios.json
+
+### jqarg-m2
+jq -r --argjson min 35 '.[] | select(.idade >= $min) | .nome' usuarios.json
+
+### jqn-onde
+jq '.[].email' usuarios.json
+jq '.[] | select(.email == null) | .nome' usuarios.json
+
+### jqn-padrao
+jq -r '.[] | .email // "(sem e-mail)"' usuarios.json
+jq '.peso // 0' produto.json
+
+### jqn-if
+jq -r '.[] | if .ativo then "\(.nome): ativo" else "\(.nome): inativo" end' usuarios.json
+jq -r '.[] | "\(.nome): \(if (.tags | length) == 0 then "sem tags" else (.tags | join(",")) end)"' usuarios.json
+
+### jqn-try
+jq '.[] | .email | ascii_downcase' usuarios.json
+jq '.[] | (.email | ascii_downcase)?' usuarios.json
+jq -r '.[] | try (.email | ascii_downcase) catch "falhou"' usuarios.json
+
+### jqn-e
+jq -e '.preco' produto.json; echo "código: $?"
+jq -e '.peso' produto.json; echo "código: $?"
+
+### jqn-erro
+jq . nada.json; echo "código: $?"
+
+### jqn-erro2
+jq '.cores[]' pedidos.json
+jq '.cores[]?' pedidos.json; echo "código: $?"
+
+### jqn-m1
+jq -r '.[] | .email // "sem-email"' usuarios.json
+
+### jqn-m2
+jq -r '.[] | select(.email != null) | .nome' usuarios.json
+

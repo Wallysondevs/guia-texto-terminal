@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Variáveis no jq: --arg, --argjson, -n e -s | Guia Texto no Terminal</title>
+<meta name="description" content="Passar valores do shell para o jq com --arg e --argjson, -n para criar JSON, -s para juntar entradas, $ENV e o padrão curl | jq.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Variáveis de fora (<span class="hl">--arg</span>, <span class="hl">--argjson</span>)</h1>
+
+<p class="intro">Em scripts, o valor do filtro vem de uma variável do shell. O jq tem opções próprias para isso, sem brigar com aspas.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li><code>--arg</code> para textos e <code>--argjson</code> para números.</li>
+<li><code>-n</code> e <code>-s</code>.</li>
+<li><code>$ENV</code> e o padrão <code>curl … | jq</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: valores de fora para dentro do filtro</h2>
+<p>Em scripts, o valor do filtro (a cidade, o status, a idade mínima) costuma vir de uma variável do shell. Colar a variável dentro das aspas do jq dá dor de cabeça com aspas e é inseguro. O jq tem opções próprias: <code>--arg</code> passa um <strong>texto</strong>, <code>--argjson</code> passa um <strong>valor JSON</strong> (número, true, lista…). Dentro do filtro, eles viram <code>$nome</code>.</p>
+<hr>
+<h2>1. <code>--arg</code>: um texto</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r --arg cidade 'São Paulo' '.[] | select(.cidade == $cidade) | .nome' usuarios.json
+Ana Souza
+Diego Rocha
+$ status=pago; jq -c --arg s &quot;$status&quot; '[.pedidos[] | select(.status == $s) | .id]' pedidos.json
+[1042,1044]
+$</pre>
+<dl class="anatomy"><dt>--arg cidade 'São Paulo'</dt><dd>cria $cidade com o texto São Paulo.</dd><dt>select(.cidade == $cidade)</dt><dd>usa a variável no filtro.</dd></dl>
+<hr>
+<h2>2. <code>--argjson</code>: um número</h2>
+<p>O <code>--arg</code> sempre cria <strong>texto</strong>. Comparar idade (número) com texto não dá o que você espera: no jq, todo número é “menor” que qualquer texto, e o filtro não devolveu ninguém. Com <code>--argjson</code>, o 30 é número de verdade:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r --arg min 30 '.[] | select(.idade &gt; $min) | .nome' usuarios.json
+$ jq -r --argjson min 30 '.[] | select(.idade &gt; $min) | .nome' usuarios.json
+Bruno Lima
+Diego Rocha
+$</pre>
+<hr>
+<h2>3. <code>-n</code> e <code>-s</code></h2>
+<p><code>-n</code> (<em>null input</em>) roda o filtro sem ler entrada nenhuma: bom para criar JSON do zero. <code>-s</code> (<em>slurp</em>, “engolir”) junta todas as entradas numa lista só:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -n --arg nome Ana --argjson idade 28 '{nome: $nome, idade: $idade}'
+{
+  &quot;nome&quot;: &quot;Ana&quot;,
+  &quot;idade&quot;: 28
+}
+$ jq -c '.nome' produto.json usuarios.json 2&gt;&amp;1 | head -2
+jq: error (at usuarios.json:6): Cannot index array with string &quot;nome&quot;
+&quot;caderno&quot;
+$ jq -s 'length' produto.json pedidos.json
+2
+$</pre>
+<p>No segundo comando, o jq aplicou <code>.nome</code> em cada arquivo: no <code>produto.json</code> deu “caderno” e no <code>usuarios.json</code> (uma lista) deu erro. A mensagem de erro apareceu primeiro porque a saída de erro não espera na fila. No terceiro, com <code>-s</code>, os dois arquivos viraram uma lista de 2 itens.</p>
+<hr>
+<h2>4. Variáveis de ambiente: <code>$ENV</code></h2>
+<p>Variáveis de ambiente também estão disponíveis, em <code>$ENV</code> (ou <code>env</code>):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ LOJA_CIDADE=Recife jq -n -r '$ENV.LOJA_CIDADE'
+Recife
+$</pre>
+<div class="tip"><strong>O padrão com APIs</strong><p>Na vida real: <code>curl -s https://api.exemplo.com/pedidos | jq -r --arg s pago '.pedidos[] | select(.status == $s) | .id'</code>. O guia não acessa a internet; o <code>cat pedidos.json |</code> faz o papel do <code>curl</code>.</p></div>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cat pedidos.json | jq -r --arg s pago '.pedidos[] | select(.status == $s) | .id'
+1042
+1044
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Variável não criada</strong>
+<p>Usar <code>$cidade</code> sem o <code>--arg</code> é erro de compilação (“$cidade is not defined”: $cidade não foi definida):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq '.[] | select(.cidade == $cidade)' usuarios.json
+jq: error: $cidade is not defined at &lt;top-level&gt;, line 1:
+.[] | select(.cidade == $cidade)                        
+jq: 1 compile error
+$</pre>
+</div>
+<div class="cenario"><strong>--argjson com texto</strong>
+<p>O valor do <code>--argjson</code> tem de ser JSON válido. Um texto sem aspas não é:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -n --argjson nome Ana '$nome'
+jq: invalid JSON text passed to --argjson
+Use jq --help for help with command-line options,
+or see the jq manpage, or online docs  at https://jqlang.github.io/jq
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>--arg x valor</code></td><td>$x é texto.</td></tr>
+<tr><td><code>--argjson n 30</code></td><td>$n é número.</td></tr>
+<tr><td><code>jq -n '{a: 1}'</code></td><td>sem entrada.</td></tr>
+<tr><td><code>jq -s . a.json b.json</code></td><td>junta as entradas numa lista.</td></tr>
+<tr><td><code>$ENV.VAR</code></td><td>variável de ambiente.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Texto de fora</h3><p>Qual opção cria uma variável de texto?</p><div class="ex-code">jq <input data-answer="--arg" aria-label="opção"> s pago '.pedidos[] | select(.status == $s)' pedidos.json</div></div><div class="exercise"><h3>2. Número de fora</h3><p>Qual opção cria uma variável com valor JSON (número)?</p><div class="ex-code">jq <input data-answer="--argjson" aria-label="opção"> min 30 '.[] | select(.idade &gt; $min)' usuarios.json</div></div><div class="mc" data-answer="1"><p class="mc-q">3. Por que <code>--arg min 30</code> com <code>.idade &gt; $min</code> não devolveu ninguém?</p>
+<label><input type="radio" name="q3"> Porque $min é texto, e número é sempre menor que texto no jq</label>
+<label><input type="radio" name="q3"> Porque falta o -r</label>
+<label><input type="radio" name="q3"> Porque 30 é muito</label>
+<label><input type="radio" name="q3"> Porque o jq não compara</label></div><div class="mc" data-answer="2"><p class="mc-q">4. O que o <code>-s</code> faz?</p>
+<label><input type="radio" name="q4"> silencia erros</label>
+<label><input type="radio" name="q4"> junta todas as entradas numa lista</label>
+<label><input type="radio" name="q4"> ordena</label>
+<label><input type="radio" name="q4"> sai sem aspas</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:--arg;;outre:^Bruno Lima$">
+<p class="try-task"><strong>Missão:</strong> com <code>--arg</code>, mostre (sem aspas) os nomes dos usuários que moram no <code>Rio de Janeiro</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq -r --arg c 'Rio de Janeiro' '.[] | select(.cidade == $c) | .nome' usuarios.json
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Bruno Lima
+</pre>
+</div><div class="trycmd" data-goal="src:--argjson;;outre:^Bruno Lima\nDiego Rocha$">
+<p class="try-task"><strong>Missão:</strong> com <code>--argjson</code>, mostre os nomes dos usuários com idade maior ou igual a 35.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq -r --argjson min 35 '.[] | select(.idade &gt;= $min) | .nome' usuarios.json
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Bruno Lima
+Diego Rocha
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>Nunca cole variáveis do shell dentro do filtro: use <code>--arg</code>.</li>
+<li>Números e booleanos vão com <code>--argjson</code>.</li>
+<li><code>-s</code> engole tudo numa lista.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

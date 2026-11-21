@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ordenar e agrupar no jq: sort_by, group_by, unique | Guia Texto no Terminal</title>
+<meta name="description" content="Ordenar e agrupar JSON com jq: sort_by, reverse, min_by, max_by, group_by, unique e unique_by.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Ordenar e agrupar (<span class="hl">sort_by</span>, <span class="hl">group_by</span>)</h1>
+
+<p class="intro">Ordenar objetos por campo, agrupar por cidade, achar o mais velho: tudo sem sair do JSON.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li><code>sort_by</code> e <code>reverse</code>.</li>
+<li><code>min_by</code> e <code>max_by</code>.</li>
+<li><code>group_by</code>, <code>unique</code> e <code>unique_by</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: ordenar e agrupar sem sair do JSON</h2>
+<p>O <code>sort</code> do terminal ordena linhas. No JSON, você quer ordenar objetos por um campo, agrupar por cidade, achar o mais velho. O jq tem funções para isso, todas trabalhando sobre uma <strong>lista</strong>.</p>
+<hr>
+<h2>1. <code>sort_by</code> e <code>reverse</code></h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r 'sort_by(.idade) | .[] | &quot;\(.idade) \(.nome)&quot;' usuarios.json
+22 Carla Dias
+28 Ana Souza
+35 Bruno Lima
+41 Diego Rocha
+$ jq -r 'sort_by(.idade) | reverse | .[0].nome' usuarios.json
+Diego Rocha
+$</pre>
+<dl class="anatomy"><dt>sort_by(.idade)</dt><dd>ordena a lista pela idade, da menor para a maior.</dd><dt>| reverse</dt><dd>inverte a lista.</dd><dt>| .[0].nome</dt><dd>o primeiro da lista invertida: o mais velho.</dd></dl>
+<hr>
+<h2>2. <code>min_by</code> e <code>max_by</code></h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r 'min_by(.idade).nome, max_by(.idade).nome' usuarios.json
+Carla Dias
+Diego Rocha
+$</pre>
+<hr>
+<h2>3. <code>group_by</code>: agrupar</h2>
+<p><code>group_by(.cidade)</code> devolve uma lista de grupos (cada grupo é uma lista). Com um <code>map</code>, cada grupo vira um resumo:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -c 'group_by(.cidade) | map({cidade: .[0].cidade, pessoas: length})' usuarios.json
+[{&quot;cidade&quot;:&quot;Belo Horizonte&quot;,&quot;pessoas&quot;:1},{&quot;cidade&quot;:&quot;Rio de Janeiro&quot;,&quot;pessoas&quot;:1},{&quot;cidade&quot;:&quot;São Paulo&quot;,&quot;pessoas&quot;:2}]
+$</pre>
+<p>O mesmo nos pedidos: quantos pedidos por status:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '.pedidos | group_by(.status) | .[] | &quot;\(.[0].status): \(length)&quot;' pedidos.json
+cancelado: 1
+pago: 2
+pendente: 1
+$</pre>
+<hr>
+<h2>4. <code>unique</code> e <code>unique_by</code></h2>
+<p><code>unique</code> tira repetidos de uma lista simples (e ordena); <code>unique_by</code> fica com um item por valor do campo:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -c '[.pedidos[].itens[].produto] | unique' pedidos.json
+[&quot;caderno&quot;,&quot;caneta&quot;,&quot;estojo&quot;,&quot;mochila&quot;]
+$ jq -c 'unique_by(.cidade) | map(.nome)' usuarios.json
+[&quot;Carla Dias&quot;,&quot;Bruno Lima&quot;,&quot;Ana Souza&quot;]
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>sort_by num objeto</strong>
+<p>As funções de ordenar são para listas. Num objeto, o <code>sort_by</code> passa pelos valores e tenta pegar <code>.loja</code> de cada um; no primeiro, o texto “caderno”, já quebra:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq 'sort_by(.loja)' produto.json
+jq: error (at produto.json:1): Cannot index string with string &quot;loja&quot;
+$</pre>
+</div>
+<div class="cenario"><strong>Esqueceu de juntar</strong>
+<p><code>.[].idade</code> são números soltos, não uma lista. O <code>sort</code> recebe um número de cada vez (“cannot be sorted, as it is not an array”: não pode ser ordenado, porque não é uma lista):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq '.[].idade | sort' usuarios.json
+jq: error (at usuarios.json:6): number (28) cannot be sorted, as it is not an array
+$</pre>
+<p>Junte numa lista antes: <code>[.[].idade] | sort</code>.</p></div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>sort_by(.idade)</code></td><td>ordena por idade.</td></tr>
+<tr><td><code>reverse</code></td><td>inverte.</td></tr>
+<tr><td><code>max_by(.idade)</code></td><td>o de maior idade.</td></tr>
+<tr><td><code>group_by(.cidade)</code></td><td>agrupa.</td></tr>
+<tr><td><code>unique</code></td><td>sem repetidos.</td></tr>
+<tr><td><code>unique_by(.cidade)</code></td><td>um por cidade.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Ordenar por campo</h3><p>Complete para ordenar por idade:</p><div class="ex-code">jq '<input data-answer="sort_by" aria-label="função">(.idade)' usuarios.json</div></div><div class="exercise"><h3>2. Agrupar</h3><p>Qual função agrupa por um campo?</p><div class="ex-code">jq '<input data-answer="group_by" aria-label="função">(.cidade)' usuarios.json</div></div><div class="mc" data-answer="2"><p class="mc-q">3. O que <code>group_by(.cidade)</code> devolve?</p>
+<label><input type="radio" name="q3"> um objeto cidade → pessoas</label>
+<label><input type="radio" name="q3"> uma lista de listas, uma por cidade</label>
+<label><input type="radio" name="q3"> um número</label>
+<label><input type="radio" name="q3"> as cidades sem repetição</label></div><div class="mc" data-answer="2"><p class="mc-q">4. Para achar o usuário mais velho:</p>
+<label><input type="radio" name="q4"> <code>max(.idade)</code></label>
+<label><input type="radio" name="q4"> <code>max_by(.idade)</code></label>
+<label><input type="radio" name="q4"> <code>sort</code></label>
+<label><input type="radio" name="q4"> <code>.idade | max</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:sort_by\(\.idade\);;src:reverse;;outre:^Diego Rocha\nBruno Lima\nAna Souza\nCarla Dias$">
+<p class="try-task"><strong>Missão:</strong> mostre os nomes dos usuários (sem aspas) em ordem de idade, do mais velho para o mais novo.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq -r 'sort_by(.idade) | reverse | .[].nome' usuarios.json
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Diego Rocha
+Bruno Lima
+Ana Souza
+Carla Dias
+</pre>
+</div><div class="trycmd" data-goal="src:unique;;out:[&quot;Belo Horizonte&quot;,&quot;Rio de Janeiro&quot;,&quot;São Paulo&quot;]">
+<p class="try-task"><strong>Missão:</strong> liste (compacto, sem repetição) todas as cidades dos usuários.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq -c '[.[].cidade] | unique' usuarios.json
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+[&quot;Belo Horizonte&quot;,&quot;Rio de Janeiro&quot;,&quot;São Paulo&quot;]
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>Essas funções trabalham sobre listas.</li>
+<li><code>group_by</code> devolve lista de listas.</li>
+<li>Valores soltos? Junte com <code>[ ]</code> antes.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>null, valor padrão (//), ? e try no jq | Guia Texto no Terminal</title>
+<meta name="description" content="Tratar dados incompletos no jq: null, o operador //, if then else, o ? para calar erros, try catch e o código de saída com -e.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">null</span>, <span class="hl">//</span>, <span class="hl">?</span> e try</h1>
+
+<p class="intro">Dados reais têm buracos. Esta aula mostra como o jq trata campos nulos e erros sem quebrar o script.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Achar e tratar <code>null</code> com <code>//</code>.</li>
+<li><code>if</code>/<code>then</code>/<code>else</code>.</li>
+<li><code>?</code>, <code>try</code>/<code>catch</code> e <code>-e</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: dados reais têm buracos</h2>
+<p>Em JSON de verdade, campos faltam, vêm <code>null</code> ou com tipo inesperado. A Carla, no <code>usuarios.json</code>, tem <code>"email": null</code>. Esta aula mostra como o jq lida com isso: o valor padrão <code>//</code>, o <code>?</code> que cala erros, o <code>if</code>, o <code>try</code> e o código de saída com <code>-e</code>.</p>
+<hr>
+<h2>1. Onde está o <code>null</code></h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq '.[].email' usuarios.json
+&quot;ana@exemplo.com&quot;
+&quot;bruno@exemplo.com&quot;
+null
+&quot;diego@exemplo.com&quot;
+$ jq '.[] | select(.email == null) | .nome' usuarios.json
+&quot;Carla Dias&quot;
+$</pre>
+<hr>
+<h2>2. Valor padrão: <code>//</code></h2>
+<p><code>a // b</code> devolve <code>a</code>, a não ser que ele seja <code>null</code> ou <code>false</code>; aí devolve <code>b</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '.[] | .email // &quot;(sem e-mail)&quot;' usuarios.json
+ana@exemplo.com
+bruno@exemplo.com
+(sem e-mail)
+diego@exemplo.com
+$ jq '.peso // 0' produto.json
+0
+$</pre>
+<dl class="anatomy"><dt>.email</dt><dd>o valor normal.</dd><dt>//</dt><dd>“ou, se for null/false”.</dd><dt>&quot;(sem e-mail)&quot;</dt><dd>o valor padrão.</dd></dl>
+<hr>
+<h2>3. <code>if</code> / <code>then</code> / <code>else</code></h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '.[] | if .ativo then &quot;\(.nome): ativo&quot; else &quot;\(.nome): inativo&quot; end' usuarios.json
+Ana Souza: ativo
+Bruno Lima: inativo
+Carla Dias: ativo
+Diego Rocha: ativo
+$ jq -r '.[] | &quot;\(.nome): \(if (.tags | length) == 0 then &quot;sem tags&quot; else (.tags | join(&quot;,&quot;)) end)&quot;' usuarios.json
+Ana Souza: admin,vendas
+Bruno Lima: vendas
+Carla Dias: sem tags
+Diego Rocha: suporte
+$</pre>
+<hr>
+<h2>4. Calar erros: <code>?</code> e <code>try</code></h2>
+<p>Um filtro com <code>?</code> no fim engole o erro e simplesmente não produz resultado. O <code>try … catch</code> permite trocar o erro por outra coisa:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq '.[] | .email | ascii_downcase' usuarios.json
+jq: error (at usuarios.json:6): explode input must be a string
+&quot;ana@exemplo.com&quot;
+&quot;bruno@exemplo.com&quot;
+$ jq '.[] | (.email | ascii_downcase)?' usuarios.json
+&quot;ana@exemplo.com&quot;
+&quot;bruno@exemplo.com&quot;
+&quot;diego@exemplo.com&quot;
+$ jq -r '.[] | try (.email | ascii_downcase) catch &quot;falhou&quot;' usuarios.json
+ana@exemplo.com
+bruno@exemplo.com
+falhou
+diego@exemplo.com
+$</pre>
+<p>No primeiro comando, o jq parou no erro da Carla e o Diego nem apareceu. A mensagem “explode input must be a string” quer dizer que o <code>ascii_downcase</code> recebeu algo que não é texto (o <code>null</code>); ela veio antes das outras linhas porque a saída de erro não espera na fila. Com <code>?</code>, a Carla foi pulada; com <code>try/catch</code>, virou “falhou”.</p>
+<hr>
+<h2>5. <code>-e</code>: o código de saída</h2>
+<p>Com <code>-e</code>, o jq sai com código 1 se o último resultado for <code>null</code> ou <code>false</code>. Ótimo para <code>if</code> em scripts do Bash:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -e '.preco' produto.json; echo &quot;código: $?&quot;
+12.5
+código: 0
+$ jq -e '.peso' produto.json; echo &quot;código: $?&quot;
+null
+código: 1
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Arquivo que não existe</strong>
+<p>O jq avisa e sai com código 2:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq . nada.json; echo &quot;código: $?&quot;
+jq: error: Could not open file nada.json: Arquivo ou diretório inexistente
+código: 2
+$</pre>
+</div>
+<div class="cenario"><strong>Abrir null</strong>
+<p>Abrir com <code>[]</code> um campo que não existe é erro (“Cannot iterate over null”: não dá para percorrer null). O <code>[]?</code> resolve:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq '.cores[]' pedidos.json
+jq: error (at pedidos.json:10): Cannot iterate over null (null)
+$ jq '.cores[]?' pedidos.json; echo &quot;código: $?&quot;
+código: 0
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>.x // &quot;padrão&quot;</code></td><td>valor padrão.</td></tr>
+<tr><td><code>select(.x != null)</code></td><td>só quem tem x.</td></tr>
+<tr><td><code>if .a then &quot;s&quot; else &quot;n&quot; end</code></td><td>decide.</td></tr>
+<tr><td><code>(.x | f)?</code></td><td>cala o erro.</td></tr>
+<tr><td><code>try f catch &quot;erro&quot;</code></td><td>troca o erro.</td></tr>
+<tr><td><code>jq -e</code></td><td>código 1 se null/false.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Valor padrão</h3><p>Qual operador dá um valor padrão para null?</p><div class="ex-code">jq '.email <input data-answer="//" aria-label="operador"> &quot;nenhum&quot;' </div></div><div class="exercise"><h3>2. Calar erro</h3><p>Qual símbolo, no fim do filtro, cala o erro?</p><div class="ex-code">jq '.cores[]<input data-answer="?" aria-label="símbolo">' pedidos.json</div></div><div class="mc" data-answer="2"><p class="mc-q">3. <code>null // "x"</code> dá:</p>
+<label><input type="radio" name="q3"> null</label>
+<label><input type="radio" name="q3"> "x"</label>
+<label><input type="radio" name="q3"> erro</label>
+<label><input type="radio" name="q3"> false</label></div><div class="mc" data-answer="2"><p class="mc-q">4. Com <code>-e</code>, quando o resultado é <code>null</code>, o código de saída é:</p>
+<label><input type="radio" name="q4"> 0</label>
+<label><input type="radio" name="q4"> 1</label>
+<label><input type="radio" name="q4"> 2</label>
+<label><input type="radio" name="q4"> 5</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src://;;outre:^sem-email$;;outre:^diego@exemplo\.com$">
+<p class="try-task"><strong>Missão:</strong> mostre o e-mail de cada usuário, sem aspas, trocando <code>null</code> por <code>sem-email</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq -r '.[] | .email // &quot;sem-email&quot;' usuarios.json
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+ana@exemplo.com
+bruno@exemplo.com
+sem-email
+diego@exemplo.com
+</pre>
+</div><div class="trycmd" data-goal="src:!=\s*null;;outre:^Ana Souza\nBruno Lima\nDiego Rocha$">
+<p class="try-task"><strong>Missão:</strong> mostre o nome dos usuários que têm e-mail (não nulo).</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq -r '.[] | select(.email != null) | .nome' usuarios.json
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Ana Souza
+Bruno Lima
+Diego Rocha
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>//</code> dá um valor quando o campo é null.</li>
+<li><code>?</code> e <code>try</code> evitam que um item ruim pare tudo.</li>
+<li><code>-e</code> deixa o Bash saber se achou algo.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

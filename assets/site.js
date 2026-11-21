@@ -59,6 +59,25 @@ var NIVEIS = [
       ["awk-scripts.html", "Scripts awk (-f), -v e funções"],
       ["awk-csv.html", "CSV com awk (e o FPAT do gawk)"]
     ]}
+  ]},
+  { id: "n4", nome: "Nível 4 · jq", curto: "jq", desc: "JSON no terminal: extrair, filtrar, montar e converter", grupos: [
+    { grupo: "Navegando no JSON", itens: [
+      ["jq-intro.html", "O que é o jq (. e -c)"],
+      ["jq-campos.html", "Campos (.campo, .a.b)"],
+      ["jq-arrays.html", "Listas (.[0], .[], fatias)"]
+    ]},
+    { grupo: "Filtrando e transformando", itens: [
+      ["jq-select.html", "O | do jq e select"],
+      ["jq-map.html", "map, length, keys e add"],
+      ["jq-texto.html", "Texto: -r, interpolação e join"],
+      ["jq-objetos.html", "Montando objetos e listas"]
+    ]},
+    { grupo: "jq na prática", itens: [
+      ["jq-ordenar.html", "Ordenar e agrupar (sort_by, group_by)"],
+      ["jq-csv.html", "JSON para CSV (@csv e @tsv)"],
+      ["jq-arg.html", "Variáveis de fora (--arg, --argjson)"],
+      ["jq-null.html", "null, //, ? e try"]
+    ]}
   ]}
 ];
 /* fim-NIVEIS */
