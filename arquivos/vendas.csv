@@ -1,0 +1,13 @@
+data,vendedor,produto,quantidade,preco
+2026-03-02,Ana,caderno,3,12.50
+2026-03-02,Bruno,caneta,10,2.00
+2026-03-02,Carla,mochila,1,89.90
+2026-03-03,Ana,caneta,5,2.00
+2026-03-03,Diego,caderno,2,12.50
+2026-03-03,Bruno,estojo,4,15.00
+2026-03-04,Carla,caderno,6,12.50
+2026-03-04,Ana,mochila,2,89.90
+2026-03-04,Diego,caneta,20,2.00
+2026-03-05,Bruno,mochila,1,89.90
+2026-03-05,Carla,estojo,3,15.00
+2026-03-05,Ana,caderno,4,12.50

@@ -1,0 +1,10 @@
+2026-03-02 08:15:02 INFO  login usuario=ana
+2026-03-02 08:17:45 ERRO  falha no pagamento pedido=1042
+2026-03-02 08:20:11 INFO  pedido criado pedido=1043
+2026-03-02 09:01:37 AVISO estoque baixo produto=caderno
+2026-03-02 09:05:59 INFO  login usuario=bruno
+2026-03-02 09:12:03 ERRO  tempo esgotado no servidor de e-mail
+2026-03-02 10:30:44 INFO  logout usuario=ana
+2026-03-02 10:45:20 ERRO  falha no pagamento pedido=1047
+2026-03-02 11:02:15 AVISO disco 85% cheio
+2026-03-02 11:15:00 INFO  login usuario=carla

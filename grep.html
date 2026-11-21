@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Procurando linhas (grep) | Guia Texto no Terminal</title>
+<meta name="description" content="O grep básico: buscar texto, -i, -v, -c, -n, -w, -o, vários arquivos, -l e o código de saída.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Procurando linhas (<span class="hl">grep</span>)</h1>
+
+<p class="intro">Antes de editar com o sed, quase sempre a gente procura. O <code>grep</code> mostra só as linhas que contêm um texto.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Buscar um texto num arquivo.</li>
+<li>As opções <code>-i</code>, <code>-v</code>, <code>-c</code>, <code>-n</code>, <code>-w</code> e <code>-o</code>.</li>
+<li>Buscar em vários arquivos e ler o código de saída.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: achar as linhas que interessam</h2>
+<p>O <code>grep</code> mostra só as linhas que contêm um texto. Ele é o primo mais simples do <code>sed</code> e do <code>awk</code>: os dois também filtram linhas, mas o <code>grep</code> é o mais rápido de digitar quando só se quer <strong>ver</strong>.</p>
+<hr>
+<h2>1. Buscar um texto</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep ERRO log.txt
+2026-03-02 08:17:45 ERRO  falha no pagamento pedido=1042
+2026-03-02 09:12:03 ERRO  tempo esgotado no servidor de e-mail
+2026-03-02 10:45:20 ERRO  falha no pagamento pedido=1047
+$</pre>
+<dl class="anatomy"><dt>grep</dt><dd>o comando de busca.</dd><dt>ERRO</dt><dd>o padrão procurado.</dd><dt>log.txt</dt><dd>onde procurar.</dd></dl>
+<hr>
+<h2>2. As opções do dia a dia</h2>
+<p><code>-i</code> ignora maiúsculas e minúsculas; <code>-v</code> inverte (mostra as que <strong>não</strong> têm); <code>-c</code> conta; <code>-n</code> mostra o número da linha:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep -i rato texto.txt
+O rato roeu a roupa do rei de Roma.
+O rato fugiu para o mato.
+Rato que é rato não volta.
+$ grep -v INFO log.txt
+2026-03-02 08:17:45 ERRO  falha no pagamento pedido=1042
+2026-03-02 09:01:37 AVISO estoque baixo produto=caderno
+2026-03-02 09:12:03 ERRO  tempo esgotado no servidor de e-mail
+2026-03-02 10:45:20 ERRO  falha no pagamento pedido=1047
+2026-03-02 11:02:15 AVISO disco 85% cheio
+$ grep -c ERRO log.txt
+3
+$ grep -n AVISO log.txt
+4:2026-03-02 09:01:37 AVISO estoque baixo produto=caderno
+9:2026-03-02 11:02:15 AVISO disco 85% cheio
+$</pre>
+<p><code>-w</code> exige a palavra inteira, e <code>-o</code> mostra só o pedaço que casou. “ato” aparece dentro de “rato” e “mato” em 3 linhas, mas como palavra sozinha não aparece em nenhuma:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep -c ato texto.txt
+3
+$ grep -cw ato texto.txt
+0
+$ grep -o 'pedido=[0-9]*' log.txt
+pedido=1042
+pedido=1043
+pedido=1047
+$</pre>
+<hr>
+<h2>3. Vários arquivos</h2>
+<p>Com mais de um arquivo, o <code>grep</code> põe o nome na frente. O <code>-l</code> lista só os nomes dos arquivos que têm o padrão:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep Ana nomes.txt vendas.csv | head -4
+nomes.txt:Ana
+vendas.csv:2026-03-02,Ana,caderno,3,12.50
+vendas.csv:2026-03-03,Ana,caneta,5,2.00
+vendas.csv:2026-03-04,Ana,mochila,2,89.90
+$ grep -l caderno *
+criar-arquivos.sh
+log.txt
+pedidos.json
+produto.json
+quebrado.json
+vendas.csv
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Arquivo que não existe</strong>
+<p>O <code>grep</code> avisa, mas continua nos outros arquivos:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep ERRO log.txt nada.txt
+log.txt:2026-03-02 08:17:45 ERRO  falha no pagamento pedido=1042
+log.txt:2026-03-02 09:12:03 ERRO  tempo esgotado no servidor de e-mail
+log.txt:2026-03-02 10:45:20 ERRO  falha no pagamento pedido=1047
+grep: nada.txt: Arquivo ou diretório inexistente
+$</pre>
+</div>
+<div class="note"><strong>Nada encontrado não é erro na tela</strong><p>Quando não acha nada, o <code>grep</code> não escreve nada. Quem conta a história é o código de saída: <code>0</code> achou, <code>1</code> não achou, <code>2</code> erro.</p></div>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep FATAL log.txt; echo $?
+1
+$ grep ERRO log.txt &gt; /dev/null; echo $?
+0
+$</pre>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>grep texto arq</code></td><td>linhas com texto.</td></tr>
+<tr><td><code>grep -i</code></td><td>ignora maiúsculas.</td></tr>
+<tr><td><code>grep -v</code></td><td>linhas sem o texto.</td></tr>
+<tr><td><code>grep -c</code></td><td>conta as linhas.</td></tr>
+<tr><td><code>grep -n</code></td><td>mostra o número da linha.</td></tr>
+<tr><td><code>grep -o</code></td><td>só o trecho que casou.</td></tr>
+<tr><td><code>grep -l texto *</code></td><td>só os nomes dos arquivos.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Ignorar maiúsculas</h3><p>Complete para achar rato, Rato ou RATO:</p><div class="ex-code">grep <input data-answer="-i" aria-label="opção"> rato texto.txt</div></div><div class="exercise"><h3>2. Inverter</h3><p>Complete para mostrar as linhas que NÃO têm INFO:</p><div class="ex-code">grep <input data-answer="-v" aria-label="opção"> INFO log.txt</div></div><div class="exercise"><h3>3. Contar</h3><p>Complete para contar as linhas com ERRO:</p><div class="ex-code">grep <input data-answer="-c" aria-label="opção"> ERRO log.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">4. O que o <code>grep</code> mostra quando não encontra nada?</p>
+<label><input type="radio" name="q4"> Uma mensagem de erro</label>
+<label><input type="radio" name="q4"> Nada (e sai com código 1)</label>
+<label><input type="radio" name="q4"> O arquivo inteiro</label>
+<label><input type="radio" name="q4"> A palavra “vazio”</label></div><div class="mc" data-answer="3"><p class="mc-q">5. Para ver só o trecho que casou, e não a linha toda, use:</p>
+<label><input type="radio" name="q5"> <code>-c</code></label>
+<label><input type="radio" name="q5"> <code>-n</code></label>
+<label><input type="radio" name="q5"> <code>-o</code></label>
+<label><input type="radio" name="q5"> <code>-l</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\bgrep\b;;src:-n;;out:4:2026-03-02 09:01:37 AVISO estoque baixo produto=caderno;;out:9:">
+<p class="try-task"><strong>Missão:</strong> mostre as linhas de <code>log.txt</code> com AVISO, com o número da linha.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+grep -n AVISO log.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+4:2026-03-02 09:01:37 AVISO estoque baixo produto=caderno
+9:2026-03-02 11:02:15 AVISO disco 85% cheio
+</pre>
+</div><div class="trycmd" data-goal="src:\bgrep\b;;src:-c;;outre:^3$">
+<p class="try-task"><strong>Missão:</strong> conte quantas linhas de <code>log.txt</code> têm a palavra <code>login</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+grep -c login log.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+3
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>grep</code> filtra linhas; <code>-v</code> inverte.</li>
+<li><code>-c</code> conta e <code>-n</code> numera.</li>
+<li>Código de saída: 0 achou, 1 não achou, 2 erro.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

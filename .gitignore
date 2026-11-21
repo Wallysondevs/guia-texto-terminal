@@ -1,0 +1,7 @@
+_saidas/*
+!_saidas/.gitkeep
+_saidas-anon/
+node_modules/
+tools/node_modules/
+*.bak
+__pycache__/

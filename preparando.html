@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A pasta de teste e os arquivos de exemplo | Guia Texto no Terminal</title>
+<meta name="description" content="Como criar a pasta ~/guia-texto-teste com os arquivos de exemplo do guia (nomes, vendas, log, JSON) e voltar tudo ao original.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>A pasta de teste e os <span class="hl">arquivos de exemplo</span></h1>
+
+<p class="intro">Antes de editar e filtrar, você precisa de algo para editar. Esta aula cria a pasta de treino e apresenta os arquivos inventados que aparecem em todas as aulas.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Criar a pasta <code>~/guia-texto-teste</code> com o script <code>criar-arquivos.sh</code>.</li>
+<li>O que tem em cada arquivo de exemplo.</li>
+<li>Como voltar os arquivos ao original.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: uma caixa de areia</h2>
+<p>O <code>sed</code> e o <code>awk</code> conseguem alterar arquivos. Para treinar sem medo, todo o guia trabalha numa pasta só para isso, a <code>~/guia-texto-teste</code>, com arquivos inventados: nomes fictícios, vendas de uma papelaria, um log de sistema, JSON de usuários e pedidos. Se algo der errado, você apaga a pasta e cria de novo.</p>
+<hr>
+<h2>1. Criar a pasta e os arquivos</h2>
+<p>Os arquivos de exemplo estão neste site, na pasta <a href="arquivos/"><code>arquivos/</code></a> (por exemplo, <a href="arquivos/vendas.csv">vendas.csv</a> e <a href="arquivos/usuarios.json">usuarios.json</a>). O jeito mais rápido é o script <a href="arquivos/criar-arquivos.sh"><code>criar-arquivos.sh</code></a>, que cria todos de uma vez, sem internet. Baixe-o (ou copie o conteúdo dele num arquivo com esse nome) e rode estes comandos:</p>
+<pre class="cmd">
+mkdir -p ~/guia-texto-teste
+cd ~/guia-texto-teste
+bash ~/Downloads/criar-arquivos.sh
+</pre>
+<p>Na coleta, o script foi rodado numa pasta vazia chamada <code>nova</code>, dentro da pasta de teste. Ele avisou onde criou os arquivos, e o <code>ls</code> mostrou o que apareceu:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ mkdir nova &amp;&amp; cd nova &amp;&amp; bash ../criar-arquivos.sh &amp;&amp; ls
+Arquivos de exemplo criados em /home/ana/guia-texto-teste/nova
+acesso.log
+config.txt
+contatos.txt
+frutas.txt
+limpa.sed
+log.txt
+nomes.txt
+notas.txt
+pedidos.json
+produto.json
+quebrado.json
+relatorio.awk
+texto.txt
+usuarios.json
+vendas.csv
+$</pre>
+<div class="tip"><strong>Voltar ao original</strong><p>Rodou um <code>sed -i</code> e estragou um arquivo? Rode <code>bash criar-arquivos.sh</code> de novo dentro da pasta: ele reescreve todos os arquivos de exemplo como eram.</p></div>
+<hr>
+<h2>2. Conhecendo os arquivos</h2>
+<p>O <code>wc -c *</code> mostra o tamanho de cada arquivo da pasta, em bytes, e o total no fim:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ wc -c *
+ 960 acesso.log
+ 148 config.txt
+ 178 contatos.txt
+5235 criar-arquivos.sh
+  47 frutas.txt
+  82 limpa.sed
+ 508 log.txt
+  59 nomes.txt
+  91 notas.txt
+ 646 pedidos.json
+ 114 produto.json
+  35 quebrado.json
+ 183 relatorio.awk
+ 128 texto.txt
+ 545 usuarios.json
+ 421 vendas.csv
+9380 total
+$</pre>
+<p>Os principais, por tipo:</p>
+<div class="table-wrap"><table class="ref">
+<tr><th>Arquivo</th><th>O que tem</th><th>Usado em</th></tr>
+<tr><td><code>nomes.txt</code>, <code>frutas.txt</code></td><td>uma palavra por linha, com repetições</td><td>sort, uniq, grep</td></tr>
+<tr><td><code>texto.txt</code></td><td>quatro frases com “rato”</td><td>sed</td></tr>
+<tr><td><code>config.txt</code></td><td>configuração <code>chave=valor</code> com comentários</td><td>sed</td></tr>
+<tr><td><code>log.txt</code>, <code>acesso.log</code></td><td>log de sistema e log de servidor web</td><td>grep, sed, awk, projetos</td></tr>
+<tr><td><code>vendas.csv</code>, <code>notas.txt</code></td><td>tabelas: vendas da papelaria e notas de alunos</td><td>cut, awk</td></tr>
+<tr><td><code>contatos.txt</code></td><td>nome; telefone; e-mail</td><td>sed com grupos</td></tr>
+<tr><td><code>usuarios.json</code>, <code>pedidos.json</code>, <code>produto.json</code></td><td>dados em JSON</td><td>jq</td></tr>
+<tr><td><code>quebrado.json</code></td><td>um JSON com erro de propósito</td><td>jq, “Quando dá errado”</td></tr>
+<tr><td><code>limpa.sed</code>, <code>relatorio.awk</code></td><td>scripts prontos</td><td>sed -f, awk -f</td></tr>
+</table></div>
+<p>Uma espiada em dois deles:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cat nomes.txt
+Ana
+bruno
+Carla
+Diego
+ana paula
+Bruno
+Eduarda
+Carla
+Fábio
+$ head -3 vendas.csv
+data,vendedor,produto,quantidade,preco
+2026-03-02,Ana,caderno,3,12.50
+2026-03-02,Bruno,caneta,10,2.00
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Fora da pasta de teste</strong>
+<p>Se você esquecer o <code>cd ~/guia-texto-teste</code>, os comandos não acham os arquivos. Na coleta, entramos de propósito numa pasta vazia:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ mkdir vazia &amp;&amp; cd vazia &amp;&amp; cat nomes.txt
+cat: nomes.txt: Arquivo ou diretório inexistente
+$</pre>
+<p>“Arquivo ou diretório inexistente” quase sempre quer dizer: pasta errada ou nome digitado errado. Confira com <code>pwd</code> e <code>ls</code>.</p></div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>mkdir -p ~/guia-texto-teste</code></td><td>cria a pasta de teste.</td></tr>
+<tr><td><code>cd ~/guia-texto-teste</code></td><td>entra nela.</td></tr>
+<tr><td><code>bash criar-arquivos.sh</code></td><td>cria (ou recria) os arquivos de exemplo.</td></tr>
+<tr><td><code>ls -l</code></td><td>lista os arquivos com tamanho.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Entrar na pasta</h3><p>Complete para entrar na pasta de teste:</p><div class="ex-code">cd <input data-answer="~/guia-texto-teste" aria-label="resposta"></div></div><div class="exercise"><h3>2. Recriar os arquivos</h3><p>Complete o comando que recria os arquivos de exemplo:</p><div class="ex-code">bash <input data-answer="criar-arquivos.sh" aria-label="resposta"></div></div><div class="mc" data-answer="3"><p class="mc-q">3. Qual arquivo tem dados em JSON?</p>
+<label><input type="radio" name="q3"> <code>vendas.csv</code></label>
+<label><input type="radio" name="q3"> <code>log.txt</code></label>
+<label><input type="radio" name="q3"> <code>usuarios.json</code></label>
+<label><input type="radio" name="q3"> <code>nomes.txt</code></label></div><div class="mc" data-answer="2"><p class="mc-q">4. Por que treinar numa pasta de teste?</p>
+<label><input type="radio" name="q4"> Porque o sed só funciona nela</label>
+<label><input type="radio" name="q4"> Para poder estragar e recriar os arquivos sem medo</label>
+<label><input type="radio" name="q4"> Porque é obrigatório no Linux</label>
+<label><input type="radio" name="q4"> Para o terminal ficar mais rápido</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:^ls\b;;out:vendas.csv;;out:usuarios.json">
+<p class="try-task"><strong>Missão:</strong> liste os arquivos da pasta de teste com <code>ls</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+ls
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+acesso.log
+config.txt
+contatos.txt
+criar-arquivos.sh
+frutas.txt
+limpa.sed
+log.txt
+nomes.txt
+notas.txt
+pedidos.json
+produto.json
+quebrado.json
+relatorio.awk
+texto.txt
+usuarios.json
+vendas.csv
+</pre>
+</div><div class="trycmd" data-goal="src:\bcat\b;;src:nomes\.txt;;outre:^Fábio$;;outre:^ana paula$">
+<p class="try-task"><strong>Missão:</strong> mostre o conteúdo de <code>nomes.txt</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+cat nomes.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Ana
+bruno
+Carla
+Diego
+ana paula
+Bruno
+Eduarda
+Carla
+Fábio
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>Treine sempre em <code>~/guia-texto-teste</code>.</li>
+<li>O <code>criar-arquivos.sh</code> recria todos os arquivos de exemplo, sem internet.</li>
+<li>“Arquivo ou diretório inexistente” costuma ser pasta errada.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

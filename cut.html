@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recortando colunas (cut) | Guia Texto no Terminal</title>
+<meta name="description" content="O comando cut: recortar campos de um CSV com -d e -f, faixas, posições com -c e o problema dos espaços repetidos.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Recortando colunas (<span class="hl">cut</span>)</h1>
+
+<p class="intro">Num CSV, cada linha é um registro e a vírgula separa as colunas. O <code>cut</code> recorta só as colunas que você quer.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Recortar campos com <code>-d</code> e <code>-f</code>.</li>
+<li>Pedir vários campos e faixas.</li>
+<li>Recortar por posição com <code>-c</code>, e o limite do cut com espaços repetidos.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: recortar colunas</h2>
+<p>Muitos arquivos são tabelas: cada linha é um registro e um caractere separa as colunas. No <code>vendas.csv</code>, o separador é a vírgula. O <code>cut</code> (“cortar”) recorta as colunas que você pedir. Ele é simples e rápido; quando o recorte precisar de lógica (condições, contas), o <code>awk</code> do Nível 3 entra em cena.</p>
+<hr>
+<h2>1. Um campo: <code>-d</code> e <code>-f</code></h2>
+<p><code>-d ,</code> diz qual é o separador (<em>delimiter</em>) e <code>-f 2</code> qual campo (<em>field</em>) você quer:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cut -d , -f 2 vendas.csv | head -4
+vendedor
+Ana
+Bruno
+Carla
+$</pre>
+<dl class="anatomy"><dt>cut</dt><dd>o comando que recorta.</dd><dt>-d ,</dt><dd>o separador é a vírgula.</dd><dt>-f 2</dt><dd>quero o 2º campo.</dd><dt>vendas.csv</dt><dd>o arquivo.</dd></dl>
+<hr>
+<h2>2. Vários campos e faixas</h2>
+<p>Separe os campos com vírgula (<code>-f 2,4</code>) ou peça uma faixa (<code>-f 1-3</code>). O separador continua aparecendo entre os campos recortados:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cut -d , -f 2,4 vendas.csv | head -3
+vendedor,quantidade
+Ana,3
+Bruno,10
+$ cut -d , -f 1-3 vendas.csv | tail -2
+2026-03-05,Carla,estojo
+2026-03-05,Ana,caderno
+$</pre>
+<hr>
+<h2>3. Por posição: <code>-c</code></h2>
+<p>Sem separador, dá para recortar por posição de caractere. No <code>log.txt</code>, os 10 primeiros caracteres são a data e os caracteres 12 a 19, a hora:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cut -c 1-10 log.txt | head -2
+2026-03-02
+2026-03-02
+$ cut -c 12-19 log.txt | head -2
+08:15:02
+08:17:45
+$</pre>
+<hr>
+<h2>4. O limite do cut: espaços repetidos</h2>
+<p>O <code>cut</code> trata <strong>cada</strong> separador como um corte. No <code>log.txt</code>, depois de “INFO” há dois espaços (para alinhar com “AVISO”). Com <code>-d ' '</code>, o campo 4 de uma linha INFO sai vazio:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ head -2 log.txt | cut -d ' ' -f 4
+
+
+$ grep AVISO log.txt | cut -d ' ' -f 4
+estoque
+disco
+$</pre>
+<p>Nas linhas INFO e ERRO, o campo 4 é o “nada” entre os dois espaços, e o <code>cut</code> mostrou linhas vazias. Nas linhas AVISO, que têm um espaço só, o campo 4 já é a primeira palavra da mensagem. O mesmo comando dá resultados diferentes conforme a linha.</p>
+<p>O <code>awk</code> não tem esse problema: por padrão ele junta espaços repetidos. Guarde isso para o Nível 3.</p>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Faltou dizer o quê recortar</strong>
+<p>Sem <code>-f</code>, <code>-c</code> ou <code>-b</code>, o <code>cut</code> não sabe o que fazer:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cut -d , vendas.csv
+cut: você deve especificar uma lista de bytes, caracteres ou campos
+Tente &quot;cut --help&quot; para mais informações.
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>cut -d , -f 2 arq</code></td><td>o 2º campo, separado por vírgula.</td></tr>
+<tr><td><code>cut -d , -f 2,4 arq</code></td><td>os campos 2 e 4.</td></tr>
+<tr><td><code>cut -d , -f 1-3 arq</code></td><td>os campos 1 a 3.</td></tr>
+<tr><td><code>cut -c 1-10 arq</code></td><td>os caracteres 1 a 10 de cada linha.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. O separador</h3><p>Complete para usar a vírgula como separador:</p><div class="ex-code">cut <input data-answer="-d ," aria-label="resposta"> -f 3 vendas.csv</div></div><div class="exercise"><h3>2. O campo</h3><p>Complete para pegar o campo 5 (preço):</p><div class="ex-code">cut -d , <input data-answer="-f 5" aria-label="resposta"> vendas.csv</div></div><div class="mc" data-answer="2"><p class="mc-q">3. <code>cut -c 1-10 log.txt</code> mostra:</p>
+<label><input type="radio" name="q3"> as 10 primeiras linhas</label>
+<label><input type="radio" name="q3"> os 10 primeiros caracteres de cada linha</label>
+<label><input type="radio" name="q3"> o campo 10</label>
+<label><input type="radio" name="q3"> as linhas 1 a 10</label></div><div class="mc" data-answer="2"><p class="mc-q">4. Por que o <code>cut -d ' '</code> se atrapalha no <code>log.txt</code>?</p>
+<label><input type="radio" name="q4"> Porque o arquivo é grande</label>
+<label><input type="radio" name="q4"> Porque há espaços repetidos e cada um conta como corte</label>
+<label><input type="radio" name="q4"> Porque o cut não aceita espaço</label>
+<label><input type="radio" name="q4"> Porque falta o -c</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\bcut\b;;src:-f\s*3;;outre:^produto$;;outre:^mochila$">
+<p class="try-task"><strong>Missão:</strong> mostre só a coluna <code>produto</code> (a 3ª) de <code>vendas.csv</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+cut -d , -f 3 vendas.csv
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+produto
+caderno
+caneta
+mochila
+caneta
+caderno
+estojo
+caderno
+mochila
+caneta
+mochila
+estojo
+caderno
+</pre>
+</div><div class="trycmd" data-goal="src:\bcut\b;;src:2,4;;outre:^vendedor,quantidade$;;outre:^Diego,20$">
+<p class="try-task"><strong>Missão:</strong> mostre as colunas vendedor e quantidade (2ª e 4ª) de <code>vendas.csv</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+cut -d , -f 2,4 vendas.csv
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+vendedor,quantidade
+Ana,3
+Bruno,10
+Carla,1
+Ana,5
+Diego,2
+Bruno,4
+Carla,6
+Ana,2
+Diego,20
+Bruno,1
+Carla,3
+Ana,4
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>-d</code> é o separador, <code>-f</code> os campos.</li>
+<li><code>-c</code> recorta por posição.</li>
+<li>Com espaços repetidos, prefira o <code>awk</code>.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

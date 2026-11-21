@@ -1,0 +1,9 @@
+# Configuração do site da loja
+nome=Loja da Ana
+porta=8080
+debug=sim
+# e-mail de contato
+email=contato@lojadaana.example
+
+tema=claro
+idioma=pt-BR

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tutorial Texto no Terminal: sed, awk e jq do zero | Guia Texto no Terminal</title>
+<meta name="description" content="Aprenda sed, awk e jq do zero, em português, com saídas reais: editar, filtrar, somar e transformar texto e JSON no terminal do Linux. Complementa o Guia Bash.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<div class="hero">
+<h1>Tutorial Texto no Terminal</h1>
+<p>Aprenda a <strong>editar, filtrar, somar e transformar texto direto no terminal do Linux</strong>, do zero, como numa escola: <code>sed</code>, <code>awk</code> e <code>jq</code>, um assunto por aula, com a saída de verdade de cada comando. Este guia complementa o <a href="https://wallysondevs.github.io/guia-bash/">Guia Bash</a>: lá você aprende a usar o terminal; aqui, a fazer o trabalho pesado com texto.</p>
+<a class="btn btn-lg" href="introducao.html">Comece aqui &#10095;</a>
+</div>
+
+<div class="pager"></div>
+
+<p>A primeira aula é <a href="introducao.html">O que são sed, awk e jq</a>. Depois vêm a pasta de teste com os arquivos de exemplo e, uma a uma, as aulas de cada comando.</p>
+
+<hr>
+
+<h2>Uma provinha</h2>
+<p>Três ferramentas encadeadas com o <code>|</code>: o <code>grep</code> acha as linhas de erro do log, o <code>sed</code> espreme os espaços duplos e o <code>awk</code> mostra só a hora e o último campo. Depois, o <code>jq</code> tira de um JSON só os nomes dos usuários ativos. Tudo isso foi rodado de verdade, na pasta de teste do guia:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep ERRO log.txt | sed 's/  / /' | awk '{print $2, $NF}'
+08:17:45 pedido=1042   « grep achou, sed limpou, awk recortou
+09:12:03 e-mail
+10:45:20 pedido=1047
+$ jq -r '.[] | select(.ativo) | .nome' usuarios.json
+Ana Souza   « o jq filtrou só os usuários ativos
+Carla Dias
+Diego Rocha
+$</pre>
+<p>Parece grego? No fim do guia, você vai ler e escrever linhas assim sem esforço.</p>
+
+<hr>
+
+<h2>O que é este guia</h2>
+<p>Logs, planilhas em CSV, arquivos de configuração e respostas de APIs em JSON: quase tudo que passa por um computador é texto. O guia ensina as três ferramentas clássicas do Linux para trabalhar com ele:</p>
+<ul>
+<li><strong><code>sed</code></strong>, o editor de fluxo: troca palavras, apaga e insere linhas, edita arquivos sem abrir editor;</li>
+<li><strong><code>awk</code></strong>, a planilha de linha de comando: colunas, somas, médias, contagens e relatórios;</li>
+<li><strong><code>jq</code></strong>, o canivete do JSON: filtra, reorganiza e converte JSON em CSV.</li>
+</ul>
+<p>São 9 aulas em cinco níveis, do básico (pipes, <code>grep</code> e regex) aos projetos completos (analisar um log, relatório de vendas, JSON para CSV). Cada aula ensina <strong>um assunto só</strong>. Os exemplos usam a usuária fictícia <code>ana</code>, no computador <code>notebook</code>, na pasta <code>~/guia-texto-teste</code>, com arquivos inventados: os nomes, as vendas e os pedidos não são de ninguém.</p>
+<p>O texto está em português do Brasil. As mensagens de erro <strong>não são traduzidas por nós</strong>: aparecem exatamente como os programas mostraram num Linux em português. O <code>sed</code>, o <code>awk</code> e o Bash já falam português; o <code>jq</code> só fala inglês, e a aula explica cada mensagem dele.</p>
+
+<hr>
+
+<h2>Como estudar</h2>
+<ol class="passo">
+  <li><strong>Prepare a pasta de teste.</strong> A aula <a href="preparando.html">A pasta de teste e os arquivos de exemplo</a> cria tudo com um script, sem internet.</li>
+  <li><strong>Leia com calma.</strong> A ideia, a anatomia do comando e a saída. Não pule a parte “Quando dá errado”.</li>
+  <li><strong>Rode no seu terminal.</strong> Este guia não simula o terminal: copie o comando, rode no seu Linux (ou no WSL do Windows, ou no macOS com as ferramentas GNU) e compare com a saída da aula.</li>
+  <li><strong>Faça as missões e os exercícios.</strong> Nas caixas <strong>Missão</strong>, cole o que o terminal respondeu e clique em <strong>Conferir</strong>.</li>
+</ol>
+
+<div class="tip">
+<strong>A regra de ouro</strong>
+<p>Ler não basta: digite cada comando. As aspas simples, as barras e as chaves do <code>sed</code>, do <code>awk</code> e do <code>jq</code> só ficam naturais com prática. <a href="introducao.html">Comece aqui</a>.</p>
+</div>
+
+<hr>
+
+<h2>Versões de referência</h2>
+<p>Todas as saídas foram colhidas num Debian 13 em <code>pt_BR.UTF-8</code>, com GNU Bash 5.2, GNU sed 4.9, GNU awk (gawk) 5.2 e jq 1.7. O Ubuntu 24.04 traz as mesmas versões. No Ubuntu, instale o gawk e o jq com <code>sudo apt install gawk jq</code>; o <code>awk</code> que vem de fábrica é o mawk, e as aulas avisam quando algo é só do gawk.</p>
+
+<hr>
+
+<h2>Escolha sua trilha</h2>
+<p>O guia tem cinco níveis, pensados para serem feitos em ordem. O mapa abaixo é montado a partir da lista oficial de aulas, o <code>NIVEIS</code>.</p>
+<div id="mapa-niveis" class="trilhas"></div>
+
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

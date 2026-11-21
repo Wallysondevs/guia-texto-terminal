@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ordenando e contando repetidos (sort e uniq) | Guia Texto no Terminal</title>
+<meta name="description" content="sort alfabético, inverso e numérico, por coluna com -t e -k; uniq, uniq -c e o ranking sort | uniq -c | sort -rn.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Ordenando e contando (<span class="hl">sort</span> e <span class="hl">uniq</span>)</h1>
+
+<p class="intro">Ordenar e contar repetições responde muita pergunta: qual fruta mais aparece, qual venda foi maior. O <code>sort</code> e o <code>uniq</code> fazem isso juntos.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li><code>sort</code>, <code>-r</code>, <code>-n</code> e a ordenação por coluna.</li>
+<li>Por que o <code>uniq</code> precisa do <code>sort</code> antes.</li>
+<li>O ranking com <code>uniq -c</code> e <code>sort -rn</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: arrumar e contar repetidos</h2>
+<p>O <code>sort</code> põe as linhas em ordem. O <code>uniq</code> junta linhas repetidas <strong>vizinhas</strong>. Juntos, respondem a perguntas como “quais frutas aparecem e quantas vezes?”. É uma das combinações mais usadas do terminal, e o <code>awk</code> faz a mesma conta de outro jeito no Nível 3.</p>
+<hr>
+<h2>1. <code>sort</code>: ordem alfabética, inversa e numérica</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sort frutas.txt
+banana
+banana
+banana
+laranja
+maçã
+maçã
+uva
+$ sort -r frutas.txt | head -3
+uva
+maçã
+maçã
+$</pre>
+<p>Para números, use <code>-n</code>. Sem ele, o <code>sort</code> compara texto, e “10” vem antes de “2” (porque “1” vem antes de “2”). O <code>-t ,</code> escolhe o separador e <code>-k 4</code> a coluna da chave:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cut -d , -f 4 vendas.csv | tail -n +2 | sort | head -4
+1
+1
+10
+2
+$ cut -d , -f 4 vendas.csv | tail -n +2 | sort -n | head -4
+1
+1
+2
+2
+$ tail -n +2 vendas.csv | sort -t , -k 4 -n -r | head -2
+2026-03-04,Diego,caneta,20,2.00
+2026-03-02,Bruno,caneta,10,2.00
+$</pre>
+<dl class="anatomy"><dt>sort</dt><dd>ordena.</dd><dt>-t ,</dt><dd>as colunas são separadas por vírgula.</dd><dt>-k 4</dt><dd>a chave é a coluna 4 (quantidade).</dd><dt>-n</dt><dd>compara como número.</dd><dt>-r</dt><dd>ordem inversa (do maior para o menor).</dd></dl>
+<hr>
+<h2>2. <code>uniq</code>: só junta vizinhos</h2>
+<p>Sem ordenar antes, o <code>uniq</code> não percebe as repetições separadas: “banana” aparece três vezes na saída. Com <code>sort</code> antes, sobra uma de cada:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ uniq frutas.txt
+banana
+maçã
+laranja
+banana
+uva
+maçã
+banana
+$ sort frutas.txt | uniq
+banana
+laranja
+maçã
+uva
+$</pre>
+<p>O <code>sort -u</code> faz o mesmo em um passo só.</p>
+<hr>
+<h2>3. Contar: <code>uniq -c</code></h2>
+<p>O <code>-c</code> põe na frente quantas vezes cada linha apareceu. Um <code>sort -rn</code> no fim deixa a mais frequente em cima, o famoso “ranking”:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sort frutas.txt | uniq -c
+      3 banana
+      1 laranja
+      2 maçã
+      1 uva
+$ sort frutas.txt | uniq -c | sort -rn
+      3 banana
+      2 maçã
+      1 uva
+      1 laranja
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Opção que não existe</strong>
+<p>Errar uma opção faz o programa avisar e sugerir o <code>--help</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sort -x frutas.txt
+sort: opção inválida -- “x”
+Tente &quot;sort --help&quot; para mais informações.
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>sort arq</code></td><td>ordem alfabética.</td></tr>
+<tr><td><code>sort -r arq</code></td><td>ordem inversa.</td></tr>
+<tr><td><code>sort -n arq</code></td><td>ordem numérica.</td></tr>
+<tr><td><code>sort -t , -k 4 -n arq</code></td><td>pela coluna 4 do CSV, como número.</td></tr>
+<tr><td><code>sort -u arq</code></td><td>ordena e tira repetidos.</td></tr>
+<tr><td><code>sort arq | uniq -c</code></td><td>conta repetições.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Numérico</h3><p>Qual opção faz o sort comparar números?</p><div class="ex-code">sort <input data-answer="-n" aria-label="opção"> numeros.txt</div></div><div class="exercise"><h3>2. Contar</h3><p>Complete para contar as repetições:</p><div class="ex-code">sort frutas.txt | uniq <input data-answer="-c" aria-label="resposta"></div></div><div class="mc" data-answer="1"><p class="mc-q">3. Por que <code>uniq frutas.txt</code> sozinho mostrou “banana” mais de uma vez?</p>
+<label><input type="radio" name="q3"> Porque o uniq só junta linhas repetidas vizinhas</label>
+<label><input type="radio" name="q3"> Porque o arquivo tem erro</label>
+<label><input type="radio" name="q3"> Porque faltou -n</label>
+<label><input type="radio" name="q3"> Porque o uniq diferencia acentos</label></div><div class="mc" data-answer="3"><p class="mc-q">4. Na coleta, qual fruta ficou em primeiro em <code>sort frutas.txt | uniq -c | sort -rn</code>?</p>
+<label><input type="radio" name="q4"> maçã</label>
+<label><input type="radio" name="q4"> uva</label>
+<label><input type="radio" name="q4"> banana</label>
+<label><input type="radio" name="q4"> laranja</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\bsort\b;;outre:^laranja$;;outre:^uva$">
+<p class="try-task"><strong>Missão:</strong> mostre cada fruta de <code>frutas.txt</code> uma vez só, em ordem.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sort -u frutas.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+banana
+laranja
+maçã
+uva
+</pre>
+</div><div class="trycmd" data-goal="src:uniq -c;;src:sort -rn|sort -nr;;outre:^\s+3 banana$;;outre:^\s+1 uva$">
+<p class="try-task"><strong>Missão:</strong> faça o ranking das frutas: quantas vezes cada uma aparece, da mais frequente para a menos.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sort frutas.txt | uniq -c | sort -rn
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+      3 banana
+      2 maçã
+      1 uva
+      1 laranja
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>sort -n</code> para números; sem ele, “10” vem antes de “2”.</li>
+<li><code>uniq</code> só junta repetidos vizinhos: ordene antes.</li>
+<li><code>sort | uniq -c | sort -rn</code> é o ranking clássico.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

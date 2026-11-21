@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O que são sed, awk e jq | Guia Texto no Terminal</title>
+<meta name="description" content="Introdução ao Guia Texto no Terminal: para que servem o sed, o awk e o jq, as versões usadas no guia e a diferença entre gawk e mawk.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>O que são <span class="hl">sed</span>, <span class="hl">awk</span> e <span class="hl">jq</span></h1>
+
+<p class="intro">Três ferramentas pequenas, presentes em quase todo Linux, fazem o trabalho pesado com texto: editar, somar colunas e entender JSON. Esta aula apresenta as três, com uma provinha real de cada uma.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Para que serve cada ferramenta: <code>sed</code>, <code>awk</code> e <code>jq</code>.</li>
+<li>Como ver as versões instaladas.</li>
+<li>Por que o guia usa o <code>gawk</code> e o que muda no <code>mawk</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: três ferramentas para mexer em texto</h2>
+<p>Quase tudo no Linux é texto: arquivos de configuração, logs, planilhas exportadas em CSV, respostas de APIs em JSON. Abrir cada arquivo num editor e mudar à mão funciona uma vez. Na décima vez, cansa. Este guia ensina três ferramentas que fazem esse trabalho <strong>sozinhas</strong>, direto no terminal:</p>
+<ul>
+<li><strong><code>sed</code></strong> (de <em>stream editor</em>, “editor de fluxo”): lê o texto linha a linha e <strong>edita</strong>: troca palavras, apaga linhas, insere texto.</li>
+<li><strong><code>awk</code></strong> (das iniciais dos criadores, Aho, Weinberger e Kernighan): enxerga cada linha como uma <strong>tabela de colunas</strong> e faz contas, filtros e relatórios.</li>
+<li><strong><code>jq</code></strong> (“JSON query”): entende <strong>JSON</strong>, o formato das APIs, e tira dele só o que você quer.</li>
+</ul>
+<p>Uma provinha de cada uma, com os arquivos de exemplo do guia. O <code>sed</code> trocou “rato” por “gato”, o <code>awk</code> mostrou só a primeira coluna e o <code>jq</code> pegou o nome do primeiro usuário:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed 's/rato/gato/' texto.txt
+O gato roeu a roupa do rei de Roma.   « o sed trocou “rato” por “gato”
+A rainha, com raiva, rasgou o resto.
+O gato fugiu para o mato.
+Rato que é gato não volta.
+$ awk '{print $1}' notas.txt
+Ana   « o awk mostrou a coluna 1
+Bruno
+Carla
+Diego
+Eduarda
+$ jq '.[0].nome' usuarios.json
+&quot;Ana Souza&quot;   « o jq tirou um campo do JSON
+$</pre>
+<p>Repare na última linha do <code>sed</code>: “Rato que é gato não volta.” O “Rato” com R maiúsculo continuou igual, e o “rato” minúsculo virou “gato”, porque o <code>s</code> diferencia maiúsculas e troca só a primeira ocorrência de cada linha. Detalhes assim são o assunto do Nível 2.</p>
+<hr>
+<h2>As versões usadas no guia</h2>
+<p>Todas as saídas foram colhidas com estas versões. Rode os mesmos comandos aí para ver as suas:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed --version | head -1
+sed (GNU sed) 4.9
+$ awk --version | head -1
+GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.2, GNU MP 6.3.0)
+$ jq --version
+jq-1.7
+$</pre>
+<dl class="anatomy"><dt>sed --version</dt><dd>pede ao programa que diga a própria versão.</dd><dt>|</dt><dd>o <em>pipe</em>: manda a saída do primeiro comando para o segundo.</dd><dt>head -1</dt><dd>mostra só a primeira linha (a versão vem em várias linhas).</dd></dl>
+<div class="warning"><strong>gawk ou mawk?</strong>
+<p>Existem vários programas chamados <code>awk</code>. O guia usa o <strong>GNU awk</strong> (<code>gawk</code>). No Ubuntu e no Debian, o <code>awk</code> que vem instalado costuma ser o <code>mawk</code>, mais simples. Quase tudo do guia funciona nos dois; quando algo é só do gawk, a aula avisa. Para ter o mesmo resultado do guia, instale o gawk com <code>sudo apt install gawk</code>: depois disso, o comando <code>awk</code> passa a chamar o gawk.</p></div>
+<p>Se o seu <code>awk</code> ainda for o mawk, ele nem entende <code>--version</code>. Na máquina da coleta o mawk também estava instalado, e foi assim que ele respondeu (a versão dele se pede com <code>-W version</code>):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ mawk --version
+mawk 1.3.4 20250131
+Copyright 2008-2024,2025, Thomas E. Dickey
+Copyright 1991-1996,2014, Michael D. Brennan
+
+random-funcs:       srandom/random
+regex-funcs:        internal
+
+compiled limits:
+sprintf buffer      8192
+maximum-integer     9223372036854775808
+$ mawk -W version | head -1
+mawk 1.3.4 20250131
+$</pre>
+<hr>
+<h2>Como as três se encaixam</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Ferramenta</th><th>Pense nela como</th><th>Melhor para</th></tr>
+<tr><td><code>sed</code></td><td>um “localizar e substituir” que roda sozinho</td><td>trocar textos, apagar e inserir linhas, limpar arquivos</td></tr>
+<tr><td><code>awk</code></td><td>uma planilha de linha de comando</td><td>colunas, somas, médias, contagens, relatórios</td></tr>
+<tr><td><code>jq</code></td><td>um tradutor de JSON</td><td>filtrar, reorganizar e converter dados JSON</td></tr>
+</table></div>
+<p>Antes delas, o Nível 1 revisa o terreno em volta: pastas de teste, <em>pipes</em> e redirecionamento, e as ferramentas pequenas (<code>cat</code>, <code>head</code>, <code>tail</code>, <code>wc</code>, <code>cut</code>, <code>sort</code>, <code>uniq</code>, <code>tr</code> e <code>grep</code>). Se você nunca abriu um terminal, comece pelo <a href="https://wallysondevs.github.io/guia-bash/">Guia Bash</a>, que este guia complementa.</p>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Programa não instalado</strong>
+<p>Se uma ferramenta não estiver instalada, o Bash avisa com esta frase. Na coleta, pedimos de propósito um programa que não existe:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jqq --version
+bash: linha 1: jqq: comando não encontrado
+$</pre>
+<p>A solução é corrigir o nome ou instalar o programa: <code>sudo apt install jq</code>, por exemplo.</p></div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>sed --version</code></td><td>mostra a versão do sed.</td></tr>
+<tr><td><code>awk --version</code></td><td>mostra a versão do awk (no gawk).</td></tr>
+<tr><td><code>mawk -W version</code></td><td>a versão do mawk.</td></tr>
+<tr><td><code>jq --version</code></td><td>mostra a versão do jq.</td></tr>
+<tr><td><code>sudo apt install gawk jq</code></td><td>instala o gawk e o jq no Debian/Ubuntu.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Qual ferramenta?</h3><p>Qual das três entende JSON?</p><div class="ex-code"><input data-answer="jq" aria-label="resposta"></div></div><div class="exercise"><h3>2. A versão</h3><p>Complete para ver a versão do sed:</p><div class="ex-code">sed <input data-answer="--version" aria-label="resposta"></div></div><div class="mc" data-answer="2"><p class="mc-q">3. O <code>awk</code> que vem no Ubuntu costuma ser:</p>
+<label><input type="radio" name="q3"> o gawk</label>
+<label><input type="radio" name="q3"> o mawk</label>
+<label><input type="radio" name="q3"> o jq</label>
+<label><input type="radio" name="q3"> o sed</label></div><div class="mc" data-answer="2"><p class="mc-q">4. No exemplo, por que “Rato”, na última linha, não virou “gato”?</p>
+<label><input type="radio" name="q4"> O sed só lê três linhas</label>
+<label><input type="radio" name="q4"> O padrão era <code>rato</code> minúsculo, e o sed diferencia maiúsculas</label>
+<label><input type="radio" name="q4"> O arquivo estava protegido</label>
+<label><input type="radio" name="q4"> Faltou o <code>-i</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\bsed --version;;src:\bhead\b;;outre:^sed \(GNU sed\) 4\.">
+<p class="try-task"><strong>Missão:</strong> mostre só a primeira linha da versão do <code>sed</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed --version | head -1
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+sed (GNU sed) 4.9
+</pre>
+</div><div class="trycmd" data-goal="src:\bjq --version;;outre:^jq-1\.">
+<p class="try-task"><strong>Missão:</strong> mostre a versão do <code>jq</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq --version
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+jq-1.7
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>sed</code> edita texto, <code>awk</code> trabalha com colunas e contas, <code>jq</code> entende JSON.</li>
+<li>O guia usa GNU sed 4.9, GNU awk 5.2 e jq 1.7, com saídas reais em pt_BR.</li>
+<li>Se o seu <code>awk</code> for o mawk, instale o gawk para acompanhar o guia.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

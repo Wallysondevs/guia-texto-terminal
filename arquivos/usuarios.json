@@ -1,0 +1,6 @@
+[
+  {"id": 1, "nome": "Ana Souza", "email": "ana@exemplo.com", "idade": 28, "cidade": "São Paulo", "ativo": true, "tags": ["admin", "vendas"]},
+  {"id": 2, "nome": "Bruno Lima", "email": "bruno@exemplo.com", "idade": 35, "cidade": "Rio de Janeiro", "ativo": false, "tags": ["vendas"]},
+  {"id": 3, "nome": "Carla Dias", "email": null, "idade": 22, "cidade": "Belo Horizonte", "ativo": true, "tags": []},
+  {"id": 4, "nome": "Diego Rocha", "email": "diego@exemplo.com", "idade": 41, "cidade": "São Paulo", "ativo": true, "tags": ["suporte"]}
+]

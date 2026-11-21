@@ -1,0 +1,4 @@
+Ana Souza;(11) 91234-5678;ana@exemplo.com
+Bruno Lima;(21) 99876-5432;bruno@exemplo.com
+Carla Dias;(31) 98765-1234;carla@exemplo.com
+Diego Rocha;(41) 97654-3210;diego@exemplo.com

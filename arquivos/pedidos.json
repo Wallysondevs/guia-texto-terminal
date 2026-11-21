@@ -1,0 +1,10 @@
+{
+  "loja": "Papelaria da Ana",
+  "atualizado": "2026-03-05",
+  "pedidos": [
+    {"id": 1042, "cliente": "Bruno", "status": "pago", "itens": [{"produto": "caderno", "qtd": 2, "preco": 12.5}, {"produto": "caneta", "qtd": 5, "preco": 2.0}]},
+    {"id": 1043, "cliente": "Carla", "status": "pendente", "itens": [{"produto": "mochila", "qtd": 1, "preco": 89.9}]},
+    {"id": 1044, "cliente": "Diego", "status": "pago", "itens": [{"produto": "estojo", "qtd": 1, "preco": 15.0}, {"produto": "caneta", "qtd": 3, "preco": 2.0}]},
+    {"id": 1045, "cliente": "Ana", "status": "cancelado", "itens": [{"produto": "caderno", "qtd": 4, "preco": 12.5}]}
+  ]
+}

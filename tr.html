@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trocando caracteres (tr) | Guia Texto no Terminal</title>
+<meta name="description" content="O comando tr: maiúsculas e minúsculas, apagar com -d, espremer com -s, trocar separadores e o limite com acentos em UTF-8.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Trocando caracteres (<span class="hl">tr</span>)</h1>
+
+<p class="intro">O <code>tr</code> troca caracteres um por um: minúsculas por maiúsculas, vírgulas por tabulações. Rápido e simples, com uma pegadinha nos acentos.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Trocar conjuntos de caracteres.</li>
+<li>Apagar (<code>-d</code>) e espremer repetições (<code>-s</code>).</li>
+<li>Por que o <code>tr</code> não entende acentos.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: trocar letra por letra</h2>
+<p>O <code>tr</code> (<em>translate</em>, “traduzir”) troca caracteres: cada letra do primeiro conjunto vira a letra correspondente do segundo. Ele não lê arquivos pelo nome: o texto chega pelo pipe ou pelo <code>&lt;</code>. Para trocar <strong>palavras</strong>, use o <code>sed</code> (Nível 2).</p>
+<hr>
+<h2>1. Maiúsculas e minúsculas</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ tr 'a-z' 'A-Z' &lt; nomes.txt | head -3
+ANA
+BRUNO
+CARLA
+$ echo 'OLÁ, MUNDO' | tr 'A-Z' 'a-z'
+olÁ, mundo
+$</pre>
+<dl class="anatomy"><dt>tr</dt><dd>o comando que troca caracteres.</dd><dt>'a-z'</dt><dd>o conjunto de origem: de a até z.</dd><dt>'A-Z'</dt><dd>o conjunto de destino: cada letra vira a maiúscula correspondente.</dd><dt>&amp;lt; nomes.txt</dt><dd>o texto entra pela entrada padrão.</dd></dl>
+<div class="warning"><strong>O tr e os acentos</strong><p>O <code>tr</code> do GNU trabalha <strong>byte a byte</strong>, e letras acentuadas ocupam 2 bytes em UTF-8. Veja na coleta: na caixa de cima, “OLÁ” virou “olÁ”, e logo abaixo “maçã e pão” virou “MAçã E PãO”. Para maiúsculas com acentos, use o <code>awk</code> (<code>toupper</code>, Nível 3) ou o <code>sed</code> com <code>\U</code> (Nível 2).</p></div>
+<pre class="term" data-cwd="~/guia-texto-teste">$ echo 'maçã e pão' | tr 'a-z' 'A-Z'
+MAçã E PãO
+$</pre>
+<hr>
+<h2>2. Apagar e espremer: <code>-d</code> e <code>-s</code></h2>
+<p><code>-d</code> apaga os caracteres do conjunto. <code>-s</code> (<em>squeeze</em>) espreme repetições num só, ótimo para os espaços duplos do <code>log.txt</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ echo '(11) 91234-5678' | tr -d '() -'
+11912345678
+$ head -1 log.txt | tr -s ' '
+2026-03-02 08:15:02 INFO login usuario=ana
+$</pre>
+<hr>
+<h2>3. Trocar separadores</h2>
+<p>Trocar a vírgula por tabulação (<code>\t</code>) transforma o CSV em colunas alinhadas no terminal; trocar o espaço por quebra de linha (<code>\n</code>) põe uma palavra por linha:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ head -3 vendas.csv | tr ',' '\t'
+data	vendedor	produto	quantidade	preco
+2026-03-02	Ana	caderno	3	12.50
+2026-03-02	Bruno	caneta	10	2.00
+$ head -1 texto.txt | tr ' ' '\n'
+O
+rato
+roeu
+a
+roupa
+do
+rei
+de
+Roma.
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Faltou o segundo conjunto</strong>
+<p>Para trocar, o <code>tr</code> precisa de dois conjuntos. Com um só (e sem <code>-d</code>), ele reclama:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ echo abc | tr 'a-z'
+tr: falta operando depois de ‘a-z’
+Dois conjuntos devem ser fornecidos na tradução.
+Tente &quot;tr --help&quot; para mais informações.
+$</pre>
+</div>
+<div class="cenario"><strong>Nome de arquivo como argumento</strong>
+<p>O <code>tr</code> não lê arquivos pelo nome: ele entende <code>nomes.txt</code> como um terceiro conjunto:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ tr a-z A-Z nomes.txt
+tr: operando extra ‘nomes.txt’
+Tente &quot;tr --help&quot; para mais informações.
+$</pre>
+<p>Use <code>tr a-z A-Z &lt; nomes.txt</code>.</p></div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>tr 'a-z' 'A-Z' &lt; arq</code></td><td>minúsculas para maiúsculas.</td></tr>
+<tr><td><code>tr -d '() -'</code></td><td>apaga esses caracteres.</td></tr>
+<tr><td><code>tr -s ' '</code></td><td>espreme espaços repetidos.</td></tr>
+<tr><td><code>tr ',' '\t'</code></td><td>troca vírgula por tabulação.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Maiúsculas</h3><p>Complete para passar para maiúsculas:</p><div class="ex-code">tr 'a-z' <input data-answer="'A-Z'" aria-label="resposta"> &lt; nomes.txt</div></div><div class="exercise"><h3>2. Apagar</h3><p>Qual opção apaga os caracteres?</p><div class="ex-code">echo '(11) 9999' | tr <input data-answer="-d" aria-label="opção"> '() '</div></div><div class="mc" data-answer="1"><p class="mc-q">3. Por que <code>echo maçã | tr a-z A-Z</code> não deixa o “ç” maiúsculo?</p>
+<label><input type="radio" name="q3"> Porque o tr trabalha byte a byte, e o ç tem 2 bytes</label>
+<label><input type="radio" name="q3"> Porque falta o -s</label>
+<label><input type="radio" name="q3"> Porque o terminal está em inglês</label>
+<label><input type="radio" name="q3"> Porque ç não tem maiúscula</label></div><div class="mc" data-answer="2"><p class="mc-q">4. Como o <code>tr</code> recebe o texto?</p>
+<label><input type="radio" name="q4"> Pelo nome do arquivo, como o cat</label>
+<label><input type="radio" name="q4"> Pela entrada padrão: pipe ou &lt;</label>
+<label><input type="radio" name="q4"> Só digitando</label>
+<label><input type="radio" name="q4"> Pela opção -f</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\btr\b;;outre:^BANANA$;;outre:^LARANJA$">
+<p class="try-task"><strong>Missão:</strong> mostre <code>frutas.txt</code> em maiúsculas com o <code>tr</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+tr 'a-z' 'A-Z' &lt; frutas.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+BANANA
+MAçã
+LARANJA
+BANANA
+UVA
+MAçã
+BANANA
+</pre>
+</div><div class="trycmd" data-goal="src:tr -s;;out:2026-03-02 09:05:59 INFO login usuario=bruno">
+<p class="try-task"><strong>Missão:</strong> pegue a 5ª linha do <code>log.txt</code> com <code>head -5 log.txt | tail -1</code> e esprema os espaços repetidos dela com o <code>tr</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+head -5 log.txt | tail -1 | tr -s ' '
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+2026-03-02 09:05:59 INFO login usuario=bruno
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>O <code>tr</code> lê da entrada padrão, nunca pelo nome do arquivo.</li>
+<li><code>-d</code> apaga, <code>-s</code> espreme.</li>
+<li>Com acentos, use <code>awk</code> ou <code>sed</code>.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

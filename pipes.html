@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pipes e redirecionamento (|, &gt;, &gt;&gt;, &lt;, 2&gt;) | Guia Texto no Terminal</title>
+<meta name="description" content="Revisão de pipes e redirecionamento no Bash para usar com sed, awk e jq: |, &gt;, &gt;&gt;, &lt; e 2&gt;, com saídas reais.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Pipes e redirecionamento (<span class="hl">|</span>, <span class="hl">&gt;</span>, <span class="hl">&lt;</span>)</h1>
+
+<p class="intro">O sed, o awk e o jq brilham quando encadeados com outros comandos. Esta aula revisa os canos e os desvios de saída que aparecem em todo o guia.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>O pipe <code>|</code>, que liga um comando no outro.</li>
+<li>Gravar com <code>&gt;</code> e acrescentar com <code>&gt;&gt;</code>.</li>
+<li>Ler com <code>&lt;</code> e desviar erros com <code>2&gt;</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: canos entre programas</h2>
+<p>As ferramentas deste guia foram feitas para trabalhar em equipe. Cada uma faz uma coisa pequena; o <strong>pipe</strong> (<code>|</code>, “cano”) liga a saída de uma na entrada da outra, e o <strong>redirecionamento</strong> (<code>&gt;</code>, <code>&gt;&gt;</code>, <code>&lt;</code>, <code>2&gt;</code>) manda a saída para um arquivo ou lê de um arquivo. O <a href="https://wallysondevs.github.io/guia-bash/">Guia Bash</a> explica tudo isso com calma; aqui vai a revisão do que você vai usar o tempo todo.</p>
+<hr>
+<h2>1. O pipe: <code>|</code></h2>
+<p>O <code>cat</code> mostra o arquivo; com o <code>|</code>, a saída dele vai para o <code>sort</code>, que ordena. Encadeando mais um <code>|</code>, o <code>head</code> fica só com as três primeiras:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cat nomes.txt | sort
+Ana
+ana paula
+bruno
+Bruno
+Carla
+Carla
+Diego
+Eduarda
+Fábio
+$ cat nomes.txt | sort | head -3
+Ana
+ana paula
+bruno
+$</pre>
+<p>O <code>sort</code> usou a ordem do português (<code>pt_BR.UTF-8</code>): “ana paula” veio logo depois de “Ana”, e “bruno” junto de “Bruno”. Num terminal em inglês ou com <code>LC_ALL=C</code>, as maiúsculas vêm antes das minúsculas.</p>
+<dl class="anatomy"><dt>cat nomes.txt</dt><dd>escreve o arquivo na saída.</dd><dt>|</dt><dd>o cano: a saída da esquerda vira a entrada da direita.</dd><dt>sort</dt><dd>ordena o que chegou pelo cano.</dd><dt>| head -3</dt><dd>mais um cano: fica só com as 3 primeiras linhas.</dd></dl>
+<hr>
+<h2>2. Gravar num arquivo: <code>&gt;</code> e <code>&gt;&gt;</code></h2>
+<p>O <code>&gt;</code> grava a saída num arquivo (e apaga o que havia nele). Repare que o primeiro comando não mostrou nada: a saída foi para o arquivo. O <code>&gt;&gt;</code> acrescenta no fim, sem apagar:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sort nomes.txt &gt; ordenados.txt
+$ head -3 ordenados.txt
+Ana
+ana paula
+bruno
+$ echo Gabriel &gt;&gt; nomes.txt
+$ tail -2 nomes.txt
+Fábio
+Gabriel
+$</pre>
+<div class="warning"><strong>Cuidado com o &gt; no mesmo arquivo</strong><p><code>sort nomes.txt &gt; nomes.txt</code> <strong>apaga</strong> o arquivo: o Bash esvazia o destino antes de o <code>sort</code> começar a ler. Grave em outro arquivo, ou use o <code>-i</code> do sed (Nível 2).</p></div>
+<p>Veja o estrago, de propósito, na pasta de teste:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sort nomes.txt &gt; nomes.txt
+$ wc -l nomes.txt
+0 nomes.txt
+$</pre>
+<hr>
+<h2>3. Ler de um arquivo: <code>&lt;</code></h2>
+<p>Com <code>&lt;</code>, o arquivo entra pela entrada padrão. Diferença visível no <code>wc -l</code>: com o nome como argumento, ele mostra o nome; pela entrada, só o número:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ wc -l nomes.txt
+9 nomes.txt
+$ wc -l &lt; nomes.txt
+9
+$</pre>
+<hr>
+<h2>4. A saída de erro: <code>2&gt;</code></h2>
+<p>Os programas têm duas saídas: a normal (1) e a de erros (2). O <code>&gt;</code> só desvia a normal; o <code>2&gt;</code> desvia os erros. No segundo comando, a mensagem não apareceu na tela: foi para <code>erros.txt</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cat nada.txt
+cat: nada.txt: Arquivo ou diretório inexistente
+$ cat nada.txt 2&gt; erros.txt
+$ cat erros.txt
+cat: nada.txt: Arquivo ou diretório inexistente
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Pipe sem comando do outro lado</strong>
+<p>Um <code>|</code> no fim da linha, sem nada depois, faz o Bash esperar a continuação. Num script (ou com <code>bash -c</code>, como na coleta), vira erro de sintaxe:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ bash -c 'cat nomes.txt |'
+bash: -c: linha 2: erro de sintaxe: fim prematuro do arquivo
+$</pre>
+<p>Complete o encanamento: <code>cat nomes.txt | sort</code>.</p></div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>cmd1 | cmd2</code></td><td>a saída de cmd1 entra em cmd2.</td></tr>
+<tr><td><code>cmd &gt; arq</code></td><td>grava a saída em arq (apaga o que havia).</td></tr>
+<tr><td><code>cmd &gt;&gt; arq</code></td><td>acrescenta no fim de arq.</td></tr>
+<tr><td><code>cmd &lt; arq</code></td><td>lê a entrada de arq.</td></tr>
+<tr><td><code>cmd 2&gt; arq</code></td><td>grava as mensagens de erro em arq.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. O cano</h3><p>Complete para ordenar a saída do cat:</p><div class="ex-code">cat nomes.txt <input data-answer="\| sort" aria-label="resposta"></div></div><div class="exercise"><h3>2. Acrescentar</h3><p>Qual símbolo acrescenta no fim do arquivo, sem apagar?</p><div class="ex-code">echo Gabriel <input data-answer="&gt;&gt;" aria-label="símbolo"> nomes.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">3. O que <code>sort nomes.txt &gt; nomes.txt</code> faz?</p>
+<label><input type="radio" name="q3"> Ordena o arquivo no lugar</label>
+<label><input type="radio" name="q3"> Deixa o arquivo vazio</label>
+<label><input type="radio" name="q3"> Dá erro e não mexe em nada</label>
+<label><input type="radio" name="q3"> Cria uma cópia</label></div><div class="mc" data-answer="3"><p class="mc-q">4. Para guardar só as mensagens de erro num arquivo, usamos:</p>
+<label><input type="radio" name="q4"> <code>&gt;</code></label>
+<label><input type="radio" name="q4"> <code>&gt;&gt;</code></label>
+<label><input type="radio" name="q4"> <code>2&gt;</code></label>
+<label><input type="radio" name="q4"> <code>|</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\bsort\b;;src:\|\s*head;;outre:^Ana$;;outre:^ana paula$">
+<p class="try-task"><strong>Missão:</strong> mostre as três primeiras linhas de <code>nomes.txt</code> em ordem, juntando <code>sort</code> e <code>head</code> com um pipe.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sort nomes.txt | head -3
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Ana
+ana paula
+bruno
+</pre>
+</div><div class="trycmd" data-goal="src:&gt;\s*ordenados\.txt;;src:\btail\b;;outre:^Fábio$">
+<p class="try-task"><strong>Missão:</strong> guarde a lista ordenada em <code>ordenados.txt</code> com <code>&gt;</code> e depois mostre a última linha desse arquivo com <code>tail -1</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sort nomes.txt &gt; ordenados.txt
+tail -1 ordenados.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Fábio
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>|</code> encadeia comandos; é assim que sed, awk e jq trabalham juntos.</li>
+<li><code>&gt;</code> apaga o destino antes; nunca redirecione para o mesmo arquivo que está lendo.</li>
+<li>Erros saem por outro canal, desviado com <code>2&gt;</code>.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

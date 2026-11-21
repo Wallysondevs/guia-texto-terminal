@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expressões regulares básicas (^, $, ., *, [ ], -E) | Guia Texto no Terminal</title>
+<meta name="description" content="Regex para grep, sed e awk: âncoras ^ e $, ponto, asterisco, classes [ ], regex estendida com grep -E, +, {n} e |.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Expressões <span class="hl">regulares</span> básicas</h1>
+
+<p class="intro">Expressões regulares descrevem formatos de texto. Elas são a língua comum do grep, do sed e do awk, então valem para o resto do guia.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Âncoras <code>^</code> e <code>$</code>.</li>
+<li>Curingas <code>.</code> e <code>*</code> e classes <code>[ ]</code>.</li>
+<li>Regex estendida (<code>-E</code>) com <code>+</code>, <code>{n}</code> e <code>|</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: padrões em vez de textos fixos</h2>
+<p>Uma <strong>expressão regular</strong> (regex) descreve um <em>formato</em> de texto: “uma linha que começa com 2026”, “um número de 4 dígitos”, “ERRO ou AVISO”. O <code>grep</code>, o <code>sed</code> e o <code>awk</code> falam regex, então esta aula vale para os três. Os exemplos usam o <code>grep</code> por ser o mais curto.</p>
+<hr>
+<h2>1. Âncoras: <code>^</code> e <code>$</code></h2>
+<p><code>^</code> é o começo da linha; <code>$</code>, o fim. <code>^O</code> pega as linhas que começam com O; <code>to\.$</code>, as que terminam com “to.” (a barra faz o ponto valer como ponto de verdade). Vieram “resto.” e “mato.”:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep '^O' texto.txt
+O rato roeu a roupa do rei de Roma.
+O rato fugiu para o mato.
+$ grep 'to\.$' texto.txt
+A rainha, com raiva, rasgou o resto.
+O rato fugiu para o mato.
+$</pre>
+<hr>
+<h2>2. Curingas: <code>.</code>, <code>*</code> e classes <code>[ ]</code></h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Peça</th><th>Casa com</th></tr>
+<tr><td><code>.</code></td><td>qualquer caractere (um só)</td></tr>
+<tr><td><code>*</code></td><td>o anterior repetido 0 ou mais vezes</td></tr>
+<tr><td><code>[abc]</code></td><td>um caractere entre a, b ou c</td></tr>
+<tr><td><code>[0-9]</code></td><td>um dígito</td></tr>
+<tr><td><code>[^0-9]</code></td><td>um caractere que <strong>não</strong> é dígito</td></tr>
+<tr><td><code>\.</code></td><td>um ponto de verdade (a barra tira o poder especial)</td></tr>
+</table></div>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep 'r.to' texto.txt
+O rato roeu a roupa do rei de Roma.
+O rato fugiu para o mato.
+Rato que é rato não volta.
+$ grep -o 'pedido=[0-9][0-9]*' log.txt
+pedido=1042
+pedido=1043
+pedido=1047
+$ grep '^[BC]' nomes.txt
+Carla
+Bruno
+Carla
+$</pre>
+<hr>
+<h2>3. Regex estendida: <code>grep -E</code></h2>
+<p>Com <code>-E</code>, ganham poder especial <code>+</code> (1 ou mais), <code>?</code> (0 ou 1), <code>{n}</code> (exatamente n vezes), <code>|</code> (ou) e os parênteses de agrupamento. Na regex básica, eles precisariam de barra invertida (<code>\+</code>, <code>\|</code>):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep -E 'ERRO|AVISO' log.txt
+2026-03-02 08:17:45 ERRO  falha no pagamento pedido=1042
+2026-03-02 09:01:37 AVISO estoque baixo produto=caderno
+2026-03-02 09:12:03 ERRO  tempo esgotado no servidor de e-mail
+2026-03-02 10:45:20 ERRO  falha no pagamento pedido=1047
+2026-03-02 11:02:15 AVISO disco 85% cheio
+$ grep -oE '[0-9]{4}-[0-9]{4}' contatos.txt
+1234-5678
+9876-5432
+8765-1234
+7654-3210
+$ grep -oE '[a-z]+@[a-z.]+' contatos.txt
+ana@exemplo.com
+bruno@exemplo.com
+carla@exemplo.com
+diego@exemplo.com
+$</pre>
+<dl class="anatomy"><dt>grep -E</dt><dd>regex estendida.</dd><dt>[0-9]{4}</dt><dd>quatro dígitos seguidos.</dd><dt>-</dt><dd>um hífen literal.</dd><dt>[0-9]{4}</dt><dd>mais quatro dígitos.</dd></dl>
+<div class="tip"><strong>Básica ou estendida?</strong><p>No <code>sed</code>, a estendida se liga com <code>-E</code>, igual ao grep. No <code>awk</code>, a regex já é estendida por padrão. No <code>jq</code>, as funções <code>test</code> e <code>match</code> usam a regex do Oniguruma, parecida com a estendida.</p></div>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Colchete sem fechar</strong>
+<p>Uma classe aberta e não fechada é um erro na regex:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep '[0-9' log.txt
+grep: [, [^, [:, [. ou [= sem correspondente
+$</pre>
+</div>
+<div class="cenario"><strong>Esqueceu o -E</strong>
+<p>Sem <code>-E</code>, o <code>|</code> é um caractere comum: o grep procurou o texto literal “ERRO|AVISO” e não achou nada (código de saída 1):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep 'ERRO|AVISO' log.txt; echo $?
+1
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>^texto</code></td><td>linha que começa com texto.</td></tr>
+<tr><td><code>texto$</code></td><td>linha que termina com texto.</td></tr>
+<tr><td><code>.</code></td><td>qualquer caractere.</td></tr>
+<tr><td><code>[0-9]</code></td><td>um dígito.</td></tr>
+<tr><td><code>x*</code></td><td>x repetido 0 ou mais vezes.</td></tr>
+<tr><td><code>-E 'a+'</code></td><td>a, 1 ou mais vezes (estendida).</td></tr>
+<tr><td><code>-E 'a|b'</code></td><td>a ou b (estendida).</td></tr>
+<tr><td><code>-E '[0-9]{4}'</code></td><td>4 dígitos (estendida).</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Começo da linha</h3><p>Qual símbolo marca o começo da linha?</p><div class="ex-code">grep '<input data-answer="^" aria-label="símbolo">2026' log.txt</div></div><div class="exercise"><h3>2. Fim da linha</h3><p>Qual símbolo marca o fim da linha?</p><div class="ex-code">grep 'a<input data-answer="$" aria-label="símbolo">' nomes.txt</div></div><div class="exercise"><h3>3. Estendida</h3><p>Complete para usar regex estendida:</p><div class="ex-code">grep <input data-answer="-E" aria-label="opção"> 'ERRO|AVISO' log.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">4. O que <code>[0-9]{3}</code> casa (com <code>-E</code>)?</p>
+<label><input type="radio" name="q4"> o texto “0-9” três vezes</label>
+<label><input type="radio" name="q4"> três dígitos seguidos</label>
+<label><input type="radio" name="q4"> um dígito até 3</label>
+<label><input type="radio" name="q4"> nada</label></div><div class="mc" data-answer="2"><p class="mc-q">5. Para casar um ponto de verdade, escreva:</p>
+<label><input type="radio" name="q5"> <code>.</code></label>
+<label><input type="radio" name="q5"> <code>\.</code></label>
+<label><input type="radio" name="q5"> <code>[.]*</code></label>
+<label><input type="radio" name="q5"> <code>^.</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\bgrep\b;;src:a\$;;outre:^Carla$;;outre:^Eduarda$">
+<p class="try-task"><strong>Missão:</strong> mostre as linhas de <code>nomes.txt</code> que terminam com a letra <code>a</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+grep 'a$' nomes.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Ana
+Carla
+ana paula
+Eduarda
+Carla
+</pre>
+</div><div class="trycmd" data-goal="src:grep -oE|grep -Eo;;out:(11) 91234-5678;;out:(41) 97654-3210">
+<p class="try-task"><strong>Missão:</strong> com <code>grep -oE</code>, tire só os telefones (formato <code>(11) 91234-5678</code>) de <code>contatos.txt</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+grep -oE '\([0-9]{2}\) [0-9]{5}-[0-9]{4}' contatos.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+(11) 91234-5678
+(21) 99876-5432
+(31) 98765-1234
+(41) 97654-3210
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>^</code> e <code>$</code> prendem no começo e no fim.</li>
+<li><code>[ ]</code> é um caractere de uma lista; <code>.</code> é qualquer um.</li>
+<li>Para <code>+</code>, <code>?</code>, <code>{n}</code> e <code>|</code>, use <code>-E</code>.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>
