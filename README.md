@@ -1,5 +1,7 @@
 # Guia Texto no Terminal — sed, awk e jq do zero
 
+**Site:** https://wallysondevs.github.io/guia-texto-terminal/
+
 Curso estático, em português do Brasil, para aprender a editar, filtrar, somar e transformar texto e JSON no terminal do Linux com **sed**, **awk** e **jq**. Complementa o [Guia Bash](https://wallysondevs.github.io/guia-bash/).
 
 - Uma aula por assunto, em cinco níveis: Base (pipes, filtros, grep e regex), sed, awk, jq e Projetos.
@@ -13,9 +15,12 @@ Abra `index.html` no navegador, ou publique a pasta no GitHub Pages (é tudo est
 Para praticar, crie a pasta de teste com os arquivos de exemplo:
 
 ```bash
+cd ~ && git clone https://github.com/Wallysondevs/guia-texto-terminal.git
 mkdir -p ~/guia-texto-teste && cd ~/guia-texto-teste
-bash /caminho/para/arquivos/criar-arquivos.sh
+bash ~/guia-texto-terminal/arquivos/criar-arquivos.sh
 ```
+
+(Se você clonou em outra pasta, troque `~/guia-texto-terminal` pelo caminho dela. O `git clone` acima, rodado na sua pasta pessoal, cria exatamente `~/guia-texto-terminal`.)
 
 ## Manutenção
 
@@ -33,7 +38,7 @@ Fluxo completo:
 
 ```bash
 python3 tools/gerar.py comandos && bash tools/coleta.sh && python3 tools/gerar.py paginas
-PROIBIDO=../.proibido-texto.txt bash tools/checar-privacidade.sh
+PROIBIDO=lista.txt bash tools/checar-privacidade.sh
 node tools/testar-missoes.js
 PUPPETEER_DIR=/caminho/puppeteer-core node tools/testar-navegador.js --todas
 ```
