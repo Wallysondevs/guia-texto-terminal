@@ -84,7 +84,9 @@ def M(bid, tarefa, cmds, goal, script=""):
         tipo, _, val = meta.partition(":")
         if tipo in ("out", "erro") and val not in saida:
             raise SystemExit("missão %s: a saída real não tem %r\n---\n%s" % (bid, val, saida))
-        if tipo == "outre" and not re.search(val.replace("(?<", "(?P<"), saida, re.M):
+        if tipo == "outre" and ("\\A" in val or "\\Z" in val):
+            raise SystemExit("missão %s: \\A e \\Z não existem na regex do JavaScript" % bid)
+        if tipo == "outre" and not re.search(val, saida, re.M):
             raise SystemExit("missão %s: a saída real não casa com %r" % (bid, val))
         if tipo == "src" and not re.search(val, "\n".join(cmds), re.M):
             raise SystemExit("missão %s: a solução não cumpre src %r" % (bid, val))

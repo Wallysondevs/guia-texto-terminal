@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flags do s no sed: g, I, número, p e w | Guia Texto no Terminal</title>
+<meta name="description" content="As flags do comando s do sed: g para todas as ocorrências, I sem diferenciar maiúsculas, um número para a enésima, p com -n e w para gravar.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Flags do s (<span class="hl">g</span>, <span class="hl">I</span>, <span class="hl">p</span>…)</h1>
+
+<p class="intro">As letras depois da última barra do <code>s///</code> mudam o jeito da troca. Com elas você troca todas as ocorrências, ignora maiúsculas e vê só o que mudou.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li><code>g</code> e <code>I</code>.</li>
+<li>Um número para trocar só a enésima ocorrência.</li>
+<li><code>p</code> com <code>-n</code> e <code>w</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: ajustar o <code>s</code></h2>
+<p>Depois da última barra do <code>s///</code> vêm as <strong>flags</strong>, letras que mudam o jeito da troca: todas as ocorrências, sem diferenciar maiúsculas, só a enésima, imprimir só o que mudou.</p>
+<hr>
+<h2>1. <code>g</code>: todas as ocorrências</h2>
+<p>Sem <code>g</code> (<em>global</em>), só a primeira de cada linha muda. Com <code>g</code>, todas:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ echo 'banana' | sed 's/a/A/'
+bAnana
+$ echo 'banana' | sed 's/a/A/g'
+bAnAnA
+$</pre>
+<hr>
+<h2>2. <code>I</code>: sem diferenciar maiúsculas</h2>
+<p>A flag <code>I</code> (do GNU sed; também aceita <code>i</code>) faz “rato”, “Rato” e “RATO” casarem. Juntando com <code>g</code>, a última linha de <code>texto.txt</code> finalmente troca as duas:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed 's/rato/gato/gI' texto.txt
+O gato roeu a roupa do rei de Roma.
+A rainha, com raiva, rasgou o resto.
+O gato fugiu para o mato.
+gato que é gato não volta.
+$</pre>
+<dl class="anatomy"><dt>s/rato/gato/</dt><dd>a substituição.</dd><dt>g</dt><dd>todas as ocorrências da linha.</dd><dt>I</dt><dd>sem diferenciar maiúsculas de minúsculas.</dd></dl>
+<p>Repare: “Rato” virou “gato”, com g minúsculo, porque o texto de troca é exatamente o que você escreveu.</p>
+<hr>
+<h2>3. Um número: só a enésima</h2>
+<p>Um número escolhe qual ocorrência trocar. Com número e <code>g</code> juntos, troca dessa em diante:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ echo 'a-b-c-d' | sed 's/-/+/2'
+a-b+c-d
+$ echo 'a-b-c-d' | sed 's/-/+/2g'
+a-b+c+d
+$</pre>
+<hr>
+<h2>4. <code>p</code> com <code>-n</code>: só as linhas que mudaram</h2>
+<p>A flag <code>p</code> imprime a linha quando a troca aconteceu. Com <code>-n</code>, você vê só as linhas alteradas, ótimo para conferir antes de gravar:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -n 's/ERRO/FALHA/p' log.txt
+2026-03-02 08:17:45 FALHA  falha no pagamento pedido=1042
+2026-03-02 09:12:03 FALHA  tempo esgotado no servidor de e-mail
+2026-03-02 10:45:20 FALHA  falha no pagamento pedido=1047
+$</pre>
+<hr>
+<h2>5. <code>w</code>: gravar as linhas alteradas</h2>
+<p>A flag <code>w arquivo</code> grava num arquivo as linhas que mudaram (precisa ser a última flag):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -n 's/AVISO/ATENÇÃO/w avisos.txt' log.txt
+$ cat avisos.txt
+2026-03-02 09:01:37 ATENÇÃO estoque baixo produto=caderno
+2026-03-02 11:02:15 ATENÇÃO disco 85% cheio
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Flag desconhecida</strong>
+<p>Uma letra que não é flag depois da última barra:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed 's/a/A/x' frutas.txt
+sed: -e expressão #1, caractere 7: opção desconhecida para o comando `s' (s///?)
+$</pre>
+</div>
+<div class="cenario"><strong>Número zero</strong>
+<p>As ocorrências contam a partir de 1:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed 's/a/A/0' frutas.txt
+sed: -e expressão #1, caractere 7: a opção numérica para o comando `s' não pode ser zero (s///0)
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>s/a/b/g</code></td><td>todas as ocorrências.</td></tr>
+<tr><td><code>s/a/b/I</code></td><td>sem diferenciar maiúsculas (GNU).</td></tr>
+<tr><td><code>s/a/b/2</code></td><td>só a 2ª ocorrência.</td></tr>
+<tr><td><code>s/a/b/2g</code></td><td>da 2ª em diante.</td></tr>
+<tr><td><code>sed -n 's/a/b/p'</code></td><td>só as linhas alteradas.</td></tr>
+<tr><td><code>s/a/b/w arq</code></td><td>grava as linhas alteradas em arq.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Todas</h3><p>Qual flag troca todas as ocorrências?</p><div class="ex-code">sed 's/a/A/<input data-answer="g" aria-label="flag">' frutas.txt</div></div><div class="exercise"><h3>2. Sem maiúsculas</h3><p>Complete para trocar rato e Rato:</p><div class="ex-code">sed 's/rato/gato/<input data-answer="gI|Ig|gi|ig" aria-label="flags">' texto.txt</div></div><div class="exercise"><h3>3. A segunda</h3><p>Complete para trocar só o 2º hífen:</p><div class="ex-code">echo a-b-c | sed 's/-/+/<input data-answer="2" aria-label="número">'</div></div><div class="mc" data-answer="2"><p class="mc-q">4. Para ver só as linhas que mudaram, use:</p>
+<label><input type="radio" name="q4"> <code>sed 's/a/b/g'</code></label>
+<label><input type="radio" name="q4"> <code>sed -n 's/a/b/p'</code></label>
+<label><input type="radio" name="q4"> <code>sed 's/a/b/w'</code></label>
+<label><input type="radio" name="q4"> <code>sed -p 's/a/b/'</code></label></div><div class="mc" data-answer="2"><p class="mc-q">5. <code>echo a-b-c-d | sed 's/-/+/2g'</code> dá:</p>
+<label><input type="radio" name="q5"> <code>a+b+c+d</code></label>
+<label><input type="radio" name="q5"> <code>a-b+c+d</code></label>
+<label><input type="radio" name="q5"> <code>a-b+c-d</code></label>
+<label><input type="radio" name="q5"> <code>a+b-c-d</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\bsed\b;;src:/g;;outre:^b4n4n4$;;outre:^l4r4nj4$">
+<p class="try-task"><strong>Missão:</strong> troque todos os <code>a</code> por <code>4</code> em <code>frutas.txt</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed 's/a/4/g' frutas.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+b4n4n4
+m4çã
+l4r4nj4
+b4n4n4
+uv4
+m4çã
+b4n4n4
+</pre>
+</div><div class="trycmd" data-goal="src:\bsed\b;;src:-n;;src:/p;;out:INFO  ENTRADA usuario=ana;;out:ENTRADA usuario=carla">
+<p class="try-task"><strong>Missão:</strong> mostre só as linhas de <code>log.txt</code> em que <code>login</code> foi trocado por <code>ENTRADA</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed -n 's/login/ENTRADA/p' log.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+2026-03-02 08:15:02 INFO  ENTRADA usuario=ana
+2026-03-02 09:05:59 INFO  ENTRADA usuario=bruno
+2026-03-02 11:15:00 INFO  ENTRADA usuario=carla
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>g</code> troca todas; <code>I</code> ignora maiúsculas.</li>
+<li>Um número escolhe a ocorrência.</li>
+<li><code>-n</code> + <code>p</code> mostra só o que mudou.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

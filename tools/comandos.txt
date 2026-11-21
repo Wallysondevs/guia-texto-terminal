@@ -239,3 +239,286 @@ grep 'a$' nomes.txt
 ### regex-m2
 grep -oE '\([0-9]{2}\) [0-9]{5}-[0-9]{4}' contatos.txt
 
+### sedi-vazio
+sed '' texto.txt
+
+### sedi-2p
+sed '2p' texto.txt
+
+### sedi-n
+sed -n '2p' texto.txt
+sed -n '$p' texto.txt
+sed -n '2,3p' texto.txt
+
+### sedi-pipe
+grep ERRO log.txt | sed -n '1p'
+echo 'Olá, Ana' | sed ''
+
+### sedi-varios
+sed -n '$p' nomes.txt frutas.txt
+
+### sedi-s
+sed -s -n '$p' nomes.txt frutas.txt
+
+### sedi-erro
+sed 'k' texto.txt
+
+### sedi-erro2
+sed -n $p texto.txt; echo "código: $?"
+
+### sedi-m1
+sed -n '3p' texto.txt
+
+### sedi-m2
+sed -n '2,4p' vendas.csv
+
+### subs-basico
+sed 's/rato/gato/' texto.txt
+
+### subs-pipe
+echo 'Olá, mundo' | sed 's/mundo/Ana/'
+grep tema config.txt | sed 's/claro/escuro/'
+
+### subs-sep
+echo /home/ana/docs/notas.txt | sed 's/\/home\/ana/~/'
+echo /home/ana/docs/notas.txt | sed 's#/home/ana#~#'
+
+### subs-regex
+grep pedido= log.txt | sed 's/pedido=[0-9]*/pedido=XXXX/'
+
+### subs-e
+sed 's/[0-9][0-9]*/[&]/' notas.txt
+echo 'preço: 12.50' | sed 's/[0-9.]*$/R$ &/'
+
+### subs-erro
+sed 's/rato/gato' texto.txt
+
+### subs-erro2
+echo /home/ana | sed 's//home/ana/~/'
+
+### subs-m1
+sed 's/claro/escuro/' config.txt
+
+### subs-m2
+sed 's/8080/9090/' config.txt
+
+### flags-g
+echo 'banana' | sed 's/a/A/'
+echo 'banana' | sed 's/a/A/g'
+
+### flags-i
+sed 's/rato/gato/gI' texto.txt
+
+### flags-num
+echo 'a-b-c-d' | sed 's/-/+/2'
+echo 'a-b-c-d' | sed 's/-/+/2g'
+
+### flags-p
+sed -n 's/ERRO/FALHA/p' log.txt
+
+### flags-w
+sed -n 's/AVISO/ATENÇÃO/w avisos.txt' log.txt
+cat avisos.txt
+
+### flags-erro
+sed 's/a/A/x' frutas.txt
+
+### flags-erro2
+sed 's/a/A/0' frutas.txt
+
+### flags-m1
+sed 's/a/4/g' frutas.txt
+
+### flags-m2
+sed -n 's/login/ENTRADA/p' log.txt
+
+### end-num
+sed '2s/caderno/CADERNO/' vendas.csv | head -3
+sed '2s/caderno/CADERNO/' vendas.csv | grep -i caderno
+sed -n '2,4p' notas.txt
+
+### end-ultima
+sed -n '$p' vendas.csv
+sed '$s/carla/CARLA/' log.txt | tail -2
+
+### end-regex
+sed -n '/AVISO/p' log.txt
+sed '/ERRO/s/pagamento/PAGAMENTO/' log.txt | head -3
+
+### end-faixa
+sed -n '/ERRO/,/AVISO/p' log.txt
+sed -n '8,/carla/p' log.txt
+
+### end-neg
+sed -n '/INFO/!p' log.txt
+sed -n '1~2p' nomes.txt
+
+### end-erro
+sed -n '0p' texto.txt
+
+### end-erro2
+sed -n '/ERRO p' log.txt
+
+### end-m1
+sed -n '/log/p' log.txt
+
+### end-m2
+sed '1,5s/ERRO/FALHA/' log.txt
+
+### del-num
+sed '1d' vendas.csv | head -3
+sed '2,8d' log.txt
+
+### del-config
+cat config.txt
+sed '/^#/d' config.txt
+sed '/^#/d; /^$/d' config.txt
+
+### del-neg
+sed '/ERRO/!d' log.txt
+
+### del-ultima
+sed '$d' nomes.txt
+
+### del-erro
+sed '/^#d' config.txt
+
+### del-erro2
+sed '1d linha' vendas.csv
+
+### del-m1
+sed '/^#/d; /^$/d' config.txt
+
+### del-m2
+sed '/INFO/d' log.txt
+
+### ins-i
+sed '1i NOMES' nomes.txt | head -3
+
+### ins-a
+sed '/^debug/a log=sim' config.txt
+sed '$a Gabriel' nomes.txt | tail -2
+
+### ins-c
+sed '/^porta=/c porta=9090' config.txt
+
+### ins-classico
+sed '2i\--- divisória ---' texto.txt
+
+### ins-erro
+sed '1a' nomes.txt
+
+### ins-m1
+sed '1i FRUTAS' frutas.txt
+
+### ins-m2
+sed '/^tema/c tema=escuro' config.txt
+
+### inp-i
+sed -i 's/claro/escuro/' config.txt
+grep tema config.txt
+
+### inp-bak
+sed -i.bak 's/8080/9090/' config.txt
+ls config.txt*
+grep porta config.txt config.txt.bak
+
+### inp-varios
+sed -i 's/Ana/Aninha/' nomes.txt vendas.csv
+grep -c Aninha nomes.txt vendas.csv
+
+### inp-n
+sed -n -i 's/ERRO/FALHA/' log.txt
+wc -l log.txt
+
+### inp-erro
+echo teste | sed -i 's/t/T/'
+
+### inp-erro2
+sed -in 's/uva/UVA/' frutas.txt
+ls frutas*
+
+### inp-m1
+sed -i 's/debug=sim/debug=nao/' config.txt
+grep debug config.txt
+
+### inp-m2
+sed -i.bak 's/uva/kiwi/' frutas.txt
+ls frutas*
+
+### ext-e
+echo 'pedido 1042' | sed 's/[0-9]+/N/'
+echo 'pedido 1042' | sed -E 's/[0-9]+/N/'
+
+### ext-grupos
+sed -E 's/^([A-Za-z]+) ([A-Za-z]+);.*/\2, \1/' contatos.txt
+
+### ext-data
+sed -E 's/^([0-9]{4})-([0-9]{2})-([0-9]{2})/\3\/\2\/\1/' log.txt | head -3
+sed -E 's#^([0-9]{4})-([0-9]{2})-([0-9]{2})#\3/\2/\1#' log.txt | head -3
+
+### ext-extrair
+sed -E 's/.*;(.*)$/\1/' contatos.txt
+
+### ext-case
+sed -E 's/^(.)/\u\1/' nomes.txt
+echo 'maçã e pão' | sed 's/.*/\U&/'
+
+### ext-erro
+sed 's/(rato)/[\1]/' texto.txt
+
+### ext-m1
+sed -E 's/^([^;]+);.*/\1/' contatos.txt
+
+### ext-m2
+sed -E 's#^([0-9]{4})-([0-9]{2})-([0-9]{2})#\3/\2/\1#' vendas.csv
+
+### var-e
+sed -e 's/rato/gato/g' -e 's/Rato/Gato/' texto.txt
+sed 's/rato/gato/g; s/Rato/Gato/' texto.txt
+
+### var-chaves
+sed '/ERRO/{s/ERRO/FALHA/; s/  / /}' log.txt | head -3
+
+### var-f
+cat limpa.sed
+sed -f limpa.sed config.txt
+
+### var-q
+sed '3q' log.txt
+sed -n '/ERRO/{p;q}' log.txt
+
+### var-erro
+sed '/ERRO/{s/ERRO/FALHA/' log.txt
+
+### var-erro2
+sed -f nada.sed config.txt
+
+### var-m1
+sed -f limpa.sed config.txt
+
+### var-m2
+sed -n '/AVISO/{s/AVISO/ATENCAO/; s/disco/DISCO/; p}' log.txt
+
+### hold-y
+echo 'maçã e pão' | sed 'y/áãçé/aace/'
+sed 'y/abc/ABC/' frutas.txt | head -3
+
+### hold-G
+sed G texto.txt
+
+### hold-juntar
+sed -n 'H; ${x; s/\n/, /g; s/^, //; p}' frutas.txt
+
+### hold-tac
+sed -n '1!G; h; $p' texto.txt
+
+### hold-erro
+sed 'y/abc/xy/' frutas.txt
+
+### hold-m1
+sed 'y/çã/ca/' frutas.txt
+
+### hold-m2
+sed -n '1!G; h; $p' nomes.txt
+

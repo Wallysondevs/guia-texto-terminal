@@ -21,6 +21,24 @@ var NIVEIS = [
       ["grep.html", "Procurando linhas (grep)"],
       ["regex.html", "Expressões regulares básicas"]
     ]}
+  ]},
+  { id: "n2", nome: "Nível 2 · sed", curto: "sed", desc: "O editor de fluxo: imprimir, trocar, apagar e inserir", grupos: [
+    { grupo: "Primeiros passos", itens: [
+      ["sed-intro.html", "Como o sed funciona (p e -n)"],
+      ["sed-substituir.html", "Substituindo (s///)"],
+      ["sed-flags.html", "Flags do s (g, I, número, p, w)"]
+    ]},
+    { grupo: "Escolhendo e mudando linhas", itens: [
+      ["sed-enderecos.html", "Endereços (linha, faixa, regex)"],
+      ["sed-apagar.html", "Apagando linhas (d)"],
+      ["sed-inserir.html", "Inserindo e trocando linhas (i, a, c)"],
+      ["sed-in-place.html", "Editando o arquivo (-i e backup)"]
+    ]},
+    { grupo: "sed avançado", itens: [
+      ["sed-grupos.html", "Regex estendida e grupos (-E, \\1)"],
+      ["sed-varios.html", "Vários comandos e scripts (-e, ;, {}, -f)"],
+      ["sed-y-hold.html", "y e o espaço reserva (h, G, x)"]
+    ]}
   ]}
 ];
 /* fim-NIVEIS */

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sed -E, grupos e \1: reorganizando texto | Guia Texto no Terminal</title>
+<meta name="description" content="sed -E com regex estendida, grupos de captura e \1 para inverter nomes, mudar o formato de datas, extrair pedaços e \U, \L, \u do GNU sed.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Regex estendida e grupos (<span class="hl">-E</span>, <span class="hl">\1</span>)</h1>
+
+<p class="intro">Parênteses guardam pedaços do que casou, e <code>\1</code>, <code>\2</code> os devolvem na ordem que você quiser. É assim que o <code>sed</code> reorganiza texto.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>A regex estendida com <code>-E</code>.</li>
+<li>Grupos <code>( )</code> e referências <code>\1</code>, <code>\2</code>.</li>
+<li><code>\U</code>, <code>\L</code> e <code>\u</code> para maiúsculas e minúsculas.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: lembrar pedaços e reorganizar</h2>
+<p>Com parênteses, a regex <strong>guarda</strong> o que casou em cada grupo. No texto de troca, <code>\1</code> é o primeiro grupo, <code>\2</code> o segundo, e assim por diante. Com isso dá para inverter nome e sobrenome, mudar o formato de datas e extrair pedaços. Com <code>-E</code> (regex estendida), os parênteses e o <code>+</code> funcionam sem barra invertida.</p>
+<hr>
+<h2>1. <code>-E</code>: regex estendida</h2>
+<p>Sem <code>-E</code>, <code>+</code> é um caractere comum, e o sed procurou um “+” no texto e não achou nada. Com <code>-E</code>, <code>[0-9]+</code> é “um ou mais dígitos”:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ echo 'pedido 1042' | sed 's/[0-9]+/N/'
+pedido 1042
+$ echo 'pedido 1042' | sed -E 's/[0-9]+/N/'
+pedido N
+$</pre>
+<hr>
+<h2>2. Grupos e <code>\1</code></h2>
+<p>Inverter “Nome Sobrenome” para “Sobrenome, Nome” no <code>contatos.txt</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -E 's/^([A-Za-z]+) ([A-Za-z]+);.*/\2, \1/' contatos.txt
+Souza, Ana
+Lima, Bruno
+Dias, Carla
+Rocha, Diego
+$</pre>
+<dl class="anatomy"><dt>^([A-Za-z]+)</dt><dd>grupo 1: a primeira palavra (o nome).</dd><dt> </dt><dd>o espaço entre as duas.</dd><dt>([A-Za-z]+)</dt><dd>grupo 2: o sobrenome.</dd><dt>;.*</dt><dd>o resto da linha (vai embora).</dd><dt>\2, \1</dt><dd>a troca: sobrenome, vírgula, nome.</dd></dl>
+<hr>
+<h2>3. Mudando o formato da data</h2>
+<p>De <code>2026-03-02</code> (ano-mês-dia) para <code>02/03/2026</code>, no começo de cada linha do log:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -E 's/^([0-9]{4})-([0-9]{2})-([0-9]{2})/\3\/\2\/\1/' log.txt | head -3
+02/03/2026 08:15:02 INFO  login usuario=ana
+02/03/2026 08:17:45 ERRO  falha no pagamento pedido=1042
+02/03/2026 08:20:11 INFO  pedido criado pedido=1043
+$ sed -E 's#^([0-9]{4})-([0-9]{2})-([0-9]{2})#\3/\2/\1#' log.txt | head -3
+02/03/2026 08:15:02 INFO  login usuario=ana
+02/03/2026 08:17:45 ERRO  falha no pagamento pedido=1042
+02/03/2026 08:20:11 INFO  pedido criado pedido=1043
+$</pre>
+<p>As duas linhas fazem o mesmo; a segunda usa <code>#</code> como separador e fica mais legível.</p>
+<hr>
+<h2>4. Extrair um pedaço</h2>
+<p>Casando a linha inteira e devolvendo só um grupo, o <code>sed</code> extrai: aqui, só o e-mail de cada contato:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -E 's/.*;(.*)$/\1/' contatos.txt
+ana@exemplo.com
+bruno@exemplo.com
+carla@exemplo.com
+diego@exemplo.com
+$</pre>
+<hr>
+<h2>5. Maiúsculas e minúsculas: <code>\U</code>, <code>\L</code>, <code>\u</code></h2>
+<p>O GNU sed tem códigos especiais na troca: <code>\U</code> passa para maiúsculas até o fim (ou até <code>\E</code>), <code>\L</code> para minúsculas e <code>\u</code> só a próxima letra. Diferente do <code>tr</code>, funciona com acentos:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -E 's/^(.)/\u\1/' nomes.txt
+Ana
+Bruno
+Carla
+Diego
+Ana paula
+Bruno
+Eduarda
+Carla
+Fábio
+$ echo 'maçã e pão' | sed 's/.*/\U&amp;/'
+MAÇÃ E PÃO
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>\1 sem grupo</strong>
+<p>Sem <code>-E</code>, os parênteses são caracteres comuns, e não existe grupo 1:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed 's/(rato)/[\1]/' texto.txt
+sed: -e expressão #1, caractere 14: referência inválida \1 na segunda parte do comando `s'
+$</pre>
+<p>Use <code>-E</code> (ou escreva <code>\(rato\)</code> na regex básica).</p></div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>sed -E 's/[0-9]+/N/'</code></td><td>regex estendida.</td></tr>
+<tr><td><code>sed -E 's/(a) (b)/\2 \1/'</code></td><td>inverte dois grupos.</td></tr>
+<tr><td><code>sed -E 's/.*;(.*)/\1/'</code></td><td>extrai o último campo.</td></tr>
+<tr><td><code>sed 's/.*/\U&amp;/'</code></td><td>tudo em maiúsculas (GNU).</td></tr>
+<tr><td><code>sed -E 's/^(.)/\u\1/'</code></td><td>primeira letra maiúscula (GNU).</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Regex estendida</h3><p>Qual opção liga a regex estendida no sed?</p><div class="ex-code">sed <input data-answer="-E" aria-label="opção"> 's/[0-9]+/N/' log.txt</div></div><div class="exercise"><h3>2. O segundo grupo</h3><p>Complete para devolver só o segundo grupo:</p><div class="ex-code">sed -E 's/(a+)(b+)/<input data-answer="\2" aria-label="resposta">/'</div></div><div class="mc" data-answer="2"><p class="mc-q">3. No texto de troca, <code>\1</code> significa:</p>
+<label><input type="radio" name="q3"> a linha 1</label>
+<label><input type="radio" name="q3"> o que casou no primeiro grupo de parênteses</label>
+<label><input type="radio" name="q3"> a primeira letra</label>
+<label><input type="radio" name="q3"> uma barra e um 1</label></div><div class="mc" data-answer="2"><p class="mc-q">4. Qual comando deixa tudo em maiúsculas, com acentos?</p>
+<label><input type="radio" name="q4"> <code>tr a-z A-Z</code></label>
+<label><input type="radio" name="q4"> <code>sed 's/.*/\U&amp;/'</code></label>
+<label><input type="radio" name="q4"> <code>sed 'y/a-z/A-Z/'</code></label>
+<label><input type="radio" name="q4"> <code>sed -U</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:sed -E;;src:\\1;;outre:^Ana Souza$;;outre:^Diego Rocha$">
+<p class="try-task"><strong>Missão:</strong> com <code>sed -E</code> e grupos, mostre só os nomes completos (o que vem antes do primeiro <code>;</code>) de <code>contatos.txt</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed -E 's/^([^;]+);.*/\1/' contatos.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Ana Souza
+Bruno Lima
+Carla Dias
+Diego Rocha
+</pre>
+</div><div class="trycmd" data-goal="src:sed -E;;src:\\3;;out:02/03/2026,Ana,caderno;;out:05/03/2026,Ana,caderno,4,12.50">
+<p class="try-task"><strong>Missão:</strong> mude a data de <code>vendas.csv</code> de <code>2026-03-02</code> para <code>02/03/2026</code> em todas as linhas.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed -E 's#^([0-9]{4})-([0-9]{2})-([0-9]{2})#\3/\2/\1#' vendas.csv
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+data,vendedor,produto,quantidade,preco
+02/03/2026,Ana,caderno,3,12.50
+02/03/2026,Bruno,caneta,10,2.00
+02/03/2026,Carla,mochila,1,89.90
+03/03/2026,Ana,caneta,5,2.00
+03/03/2026,Diego,caderno,2,12.50
+03/03/2026,Bruno,estojo,4,15.00
+04/03/2026,Carla,caderno,6,12.50
+04/03/2026,Ana,mochila,2,89.90
+04/03/2026,Diego,caneta,20,2.00
+05/03/2026,Bruno,mochila,1,89.90
+05/03/2026,Carla,estojo,3,15.00
+05/03/2026,Ana,caderno,4,12.50
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>-E</code> deixa <code>( )</code>, <code>+</code> e <code>{n}</code> funcionarem sem barra.</li>
+<li><code>\1</code> devolve o primeiro grupo.</li>
+<li><code>\U</code> e <code>\L</code> mudam a caixa, com acentos.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

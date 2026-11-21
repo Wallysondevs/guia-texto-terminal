@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editando o próprio arquivo com sed -i (e backup) | Guia Texto no Terminal</title>
+<meta name="description" content="sed -i para gravar as mudanças no arquivo, -i.bak para guardar backup, vários arquivos, o perigo do -n e o erro do -in.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Editando o arquivo (<span class="hl">-i</span> e backup)</h1>
+
+<p class="intro">A opção <code>-i</code> grava a mudança no próprio arquivo. Útil e perigosa: esta aula mostra como usar com segurança, sempre na pasta de teste.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Gravar no arquivo com <code>-i</code>.</li>
+<li>Guardar o original com <code>-i.bak</code>.</li>
+<li>As armadilhas: <code>-n</code> com <code>-i</code> e o <code>-in</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: gravar a mudança no próprio arquivo</h2>
+<p>Até aqui, o <code>sed</code> só mostrou o resultado na tela. A opção <code>-i</code> (<em>in-place</em>, “no lugar”) <strong>grava</strong> a mudança no arquivo. É poderosa e perigosa: não tem “desfazer”. Por isso, a regra do guia é <strong>só usar <code>-i</code> na pasta de teste</strong> e, de preferência, com backup.</p>
+<div class="warning"><strong>Confira antes de gravar</strong><p>Rode o comando <strong>sem</strong> <code>-i</code> primeiro e olhe a saída. Só quando estiver certo, acrescente o <code>-i</code>. Se estragar, recrie os arquivos com <code>bash criar-arquivos.sh</code>.</p></div>
+<hr>
+<h2>1. <code>-i</code>: gravar</h2>
+<p>Repare que o <code>sed -i</code> não mostra nada na tela. O resultado está no arquivo:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -i 's/claro/escuro/' config.txt
+$ grep tema config.txt
+tema=escuro
+$</pre>
+<hr>
+<h2>2. <code>-i.bak</code>: gravar com backup</h2>
+<p>Com um sufixo colado no <code>-i</code>, o <code>sed</code> guarda uma cópia do original antes de gravar:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -i.bak 's/8080/9090/' config.txt
+$ ls config.txt*
+config.txt
+config.txt.bak
+$ grep porta config.txt config.txt.bak
+config.txt:porta=9090
+config.txt.bak:porta=8080
+$</pre>
+<dl class="anatomy"><dt>-i.bak</dt><dd>grava no arquivo e guarda o original como config.txt.bak.</dd><dt>s/8080/9090/</dt><dd>a mudança.</dd><dt>config.txt</dt><dd>o arquivo alterado.</dd></dl>
+<p>Para desfazer, basta trazer o backup de volta: <code>mv config.txt.bak config.txt</code>.</p>
+<hr>
+<h2>3. Vários arquivos de uma vez</h2>
+<p>O <code>-i</code> vale para todos os arquivos da linha, cada um gravado separadamente. Aqui, “Ana” virou “Aninha” nos dois de uma vez (e “ana paula”, minúsculo, ficou como estava):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -i 's/Ana/Aninha/' nomes.txt vendas.csv
+$ grep -c Aninha nomes.txt vendas.csv
+nomes.txt:1
+vendas.csv:4
+$</pre>
+<hr>
+<h2>4. O cuidado com o <code>-n</code></h2>
+<p><code>-n</code> com <code>-i</code> grava <strong>só o que foi impresso</strong>. Esquecer o <code>p</code> deixa o arquivo vazio:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -n -i 's/ERRO/FALHA/' log.txt
+$ wc -l log.txt
+0 log.txt
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>-i sem arquivo</strong>
+<p>O <code>-i</code> precisa de um arquivo para gravar; não funciona com pipe:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ echo teste | sed -i 's/t/T/'
+sed: nenhum arquivo de entrada
+$</pre>
+</div>
+<div class="cenario"><strong>-in não é -i -n</strong>
+<p>O que vem colado no <code>-i</code> é o sufixo do backup. <code>-in</code> não liga o <code>-n</code>: cria um backup com sufixo <code>n</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -in 's/uva/UVA/' frutas.txt
+$ ls frutas*
+frutas.txt
+frutas.txtn
+$</pre>
+<p>Escreva <code>-n -i</code> separados, ou <code>-ni</code>.</p></div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>sed -i 's/a/b/' arq</code></td><td>grava a troca em arq.</td></tr>
+<tr><td><code>sed -i.bak 's/a/b/' arq</code></td><td>grava e guarda arq.bak.</td></tr>
+<tr><td><code>mv arq.bak arq</code></td><td>desfaz, trazendo o backup de volta.</td></tr>
+<tr><td><code>sed -n -i '/x/p' arq</code></td><td>deixa no arquivo só as linhas com x.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Gravar</h3><p>Qual opção grava a mudança no arquivo?</p><div class="ex-code">sed <input data-answer="-i" aria-label="opção"> 's/a/b/' frutas.txt</div></div><div class="exercise"><h3>2. Com backup</h3><p>Complete para guardar o original como .bak:</p><div class="ex-code">sed <input data-answer="-i.bak" aria-label="resposta"> 's/a/b/' frutas.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">3. O que <code>sed -i</code> mostra na tela quando dá certo?</p>
+<label><input type="radio" name="q3"> O arquivo alterado</label>
+<label><input type="radio" name="q3"> Nada</label>
+<label><input type="radio" name="q3"> Só as linhas alteradas</label>
+<label><input type="radio" name="q3"> Uma mensagem de sucesso</label></div><div class="mc" data-answer="2"><p class="mc-q">4. <code>sed -in 's/a/b/' frutas.txt</code>:</p>
+<label><input type="radio" name="q4"> liga -i e -n</label>
+<label><input type="radio" name="q4"> grava e cria o backup <code>frutas.txtn</code></label>
+<label><input type="radio" name="q4"> dá erro</label>
+<label><input type="radio" name="q4"> só mostra na tela</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:sed -i;;src:\bgrep\b;;outre:^debug=nao$">
+<p class="try-task"><strong>Missão:</strong> troque <code>sim</code> por <code>nao</code> no <code>debug</code> de <code>config.txt</code> com <code>-i</code> e depois mostre a linha com <code>grep debug config.txt</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed -i 's/debug=sim/debug=nao/' config.txt
+grep debug config.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+debug=nao
+</pre>
+</div><div class="trycmd" data-goal="src:-i\.bak;;src:\bls\b;;out:frutas.txt.bak">
+<p class="try-task"><strong>Missão:</strong> com <code>-i.bak</code>, troque <code>uva</code> por <code>kiwi</code> em <code>frutas.txt</code> e liste os arquivos <code>frutas*</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed -i.bak 's/uva/kiwi/' frutas.txt
+ls frutas*
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+frutas.txt
+frutas.txt.bak
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>Teste sem <code>-i</code>, confira, e só então grave.</li>
+<li><code>-i.bak</code> guarda o original.</li>
+<li><code>-n -i</code> sem <code>p</code> esvazia o arquivo.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

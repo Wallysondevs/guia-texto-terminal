@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inserindo e trocando linhas com sed (i, a, c) | Guia Texto no Terminal</title>
+<meta name="description" content="Os comandos i, a e c do sed: inserir antes, acrescentar depois, trocar a linha inteira, e a forma clássica com barra invertida.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Inserindo e trocando linhas (<span class="hl">i</span>, <span class="hl">a</span>, <span class="hl">c</span>)</h1>
+
+<p class="intro">Para colocar linhas novas ou trocar uma linha inteira, o <code>sed</code> tem três comandos: <code>i</code>, <code>a</code> e <code>c</code>.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li><code>i</code>: inserir antes de uma linha.</li>
+<li><code>a</code>: acrescentar depois.</li>
+<li><code>c</code>: trocar a linha inteira.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: acrescentar linhas inteiras</h2>
+<p>Três comandos colocam texto novo: <code>i</code> (<em>insert</em>) insere <strong>antes</strong> da linha, <code>a</code> (<em>append</em>) acrescenta <strong>depois</strong> e <code>c</code> (<em>change</em>) <strong>troca</strong> a linha inteira. No GNU sed, o texto pode vir na mesma linha do comando.</p>
+<hr>
+<h2>1. <code>i</code>: antes</h2>
+<p>Um cabeçalho novo para o <code>nomes.txt</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed '1i NOMES' nomes.txt | head -3
+NOMES
+Ana
+bruno
+$</pre>
+<dl class="anatomy"><dt>1</dt><dd>o endereço: a linha 1.</dd><dt>i</dt><dd>inserir antes.</dd><dt>NOMES</dt><dd>o texto da linha nova.</dd></dl>
+<hr>
+<h2>2. <code>a</code>: depois</h2>
+<p>Acrescentar uma configuração depois da linha do <code>debug</code>, e uma linha no fim do arquivo (<code>$a</code>):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed '/^debug/a log=sim' config.txt
+# Configuração do site da loja
+nome=Loja da Ana
+porta=8080
+debug=sim
+log=sim
+# e-mail de contato
+email=contato@lojadaana.example
+
+tema=claro
+idioma=pt-BR
+$ sed '$a Gabriel' nomes.txt | tail -2
+Fábio
+Gabriel
+$</pre>
+<hr>
+<h2>3. <code>c</code>: trocar a linha inteira</h2>
+<p>Diferente do <code>s</code>, que troca um pedaço, o <code>c</code> joga fora a linha toda e põe outra:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed '/^porta=/c porta=9090' config.txt
+# Configuração do site da loja
+nome=Loja da Ana
+porta=9090
+debug=sim
+# e-mail de contato
+email=contato@lojadaana.example
+
+tema=claro
+idioma=pt-BR
+$</pre>
+<hr>
+<h2>4. A forma clássica, com barra invertida</h2>
+<p>O padrão POSIX pede o texto na linha de baixo, depois de <code>\</code>. Num script de uma linha, o GNU sed aceita <code>i\texto</code> também. Você vai ver muito essa forma em scripts antigos:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed '2i\--- divisória ---' texto.txt
+O rato roeu a roupa do rei de Roma.
+--- divisória ---
+A rainha, com raiva, rasgou o resto.
+O rato fugiu para o mato.
+Rato que é rato não volta.
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Comando sem texto</strong>
+<p>O <code>a</code>, o <code>i</code> e o <code>c</code> precisam do texto que vão colocar:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed '1a' nomes.txt
+sed: -e expressão #1, caractere 2: deve haver um escape \ depois dos comandos `a', `c' e `i'
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>1i texto</code></td><td>insere antes da linha 1.</td></tr>
+<tr><td><code>$a texto</code></td><td>acrescenta depois da última.</td></tr>
+<tr><td><code>/x/a texto</code></td><td>depois de cada linha com x.</td></tr>
+<tr><td><code>/x/c texto</code></td><td>troca as linhas com x por texto.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Antes</h3><p>Qual comando insere antes da linha?</p><div class="ex-code">sed '1<input data-answer="i" aria-label="comando"> TÍTULO' nomes.txt</div></div><div class="exercise"><h3>2. Depois da última</h3><p>Complete para acrescentar depois da última linha:</p><div class="ex-code">sed '<input data-answer="$a" aria-label="resposta"> FIM' nomes.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">3. Qual a diferença entre <code>c</code> e <code>s</code>?</p>
+<label><input type="radio" name="q3"> Nenhuma</label>
+<label><input type="radio" name="q3"> O <code>c</code> troca a linha inteira; o <code>s</code>, um pedaço</label>
+<label><input type="radio" name="q3"> O <code>s</code> troca a linha inteira</label>
+<label><input type="radio" name="q3"> O <code>c</code> apaga a linha</label></div><div class="mc" data-answer="2"><p class="mc-q">4. <code>sed '/^debug/a log=sim' config.txt</code> põe <code>log=sim</code>:</p>
+<label><input type="radio" name="q4"> antes da linha do debug</label>
+<label><input type="radio" name="q4"> depois da linha do debug</label>
+<label><input type="radio" name="q4"> no lugar da linha do debug</label>
+<label><input type="radio" name="q4"> no fim do arquivo</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\bsed\b;;src:1i;;outre:^FRUTAS\nbanana$">
+<p class="try-task"><strong>Missão:</strong> insira a linha <code>FRUTAS</code> antes da primeira linha de <code>frutas.txt</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed '1i FRUTAS' frutas.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+FRUTAS
+banana
+maçã
+laranja
+banana
+uva
+maçã
+banana
+</pre>
+</div><div class="trycmd" data-goal="src:\bsed\b;;src:c\s*\\?tema=escuro;;out:tema=escuro;;out:idioma=pt-BR">
+<p class="try-task"><strong>Missão:</strong> troque a linha inteira do <code>tema</code> em <code>config.txt</code> por <code>tema=escuro</code>, usando o comando <code>c</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed '/^tema/c tema=escuro' config.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+# Configuração do site da loja
+nome=Loja da Ana
+porta=8080
+debug=sim
+# e-mail de contato
+email=contato@lojadaana.example
+
+tema=escuro
+idioma=pt-BR
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>i</code> antes, <code>a</code> depois, <code>c</code> no lugar.</li>
+<li>O texto vem logo depois do comando (GNU) ou depois de <code>\</code>.</li>
+<li>O <code>c</code> troca a linha inteira, não um pedaço.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

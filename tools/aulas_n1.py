@@ -56,7 +56,7 @@ def prep_corpo():
 <p>O <code>sed</code> e o <code>awk</code> conseguem alterar arquivos. Para treinar sem medo, todo o guia trabalha numa pasta só para isso, a <code>~/guia-texto-teste</code>, com arquivos inventados: nomes fictícios, vendas de uma papelaria, um log de sistema, JSON de usuários e pedidos. Se algo der errado, você apaga a pasta e cria de novo.</p>
 <hr>
 <h2>1. Criar a pasta e os arquivos</h2>
-<p>Os arquivos de exemplo estão neste site, na pasta <a href="arquivos/"><code>arquivos/</code></a> (por exemplo, <a href="arquivos/vendas.csv">vendas.csv</a> e <a href="arquivos/usuarios.json">usuarios.json</a>). O jeito mais rápido é o script <a href="arquivos/criar-arquivos.sh"><code>criar-arquivos.sh</code></a>, que cria todos de uma vez, sem internet. Baixe-o (ou copie o conteúdo dele num arquivo com esse nome) e rode estes comandos:</p>
+<p>Os arquivos de exemplo estão neste site, na pasta <code>arquivos/</code> (por exemplo, <a href="arquivos/vendas.csv">vendas.csv</a> e <a href="arquivos/usuarios.json">usuarios.json</a>). O jeito mais rápido é o script <a href="arquivos/criar-arquivos.sh"><code>criar-arquivos.sh</code></a>, que cria todos de uma vez, sem internet. Baixe-o (ou copie o conteúdo dele num arquivo com esse nome) e rode estes comandos:</p>
 <pre class="cmd">
 mkdir -p ~/guia-texto-teste
 cd ~/guia-texto-teste

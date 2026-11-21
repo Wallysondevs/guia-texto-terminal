@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sed: o comando y e o espaço reserva (h, H, G, x) | Guia Texto no Terminal</title>
+<meta name="description" content="O comando y do sed para trocar caracteres (com acentos) e o hold space: h, H, g, G e x para juntar linhas, espaçamento duplo e inverter a ordem.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>O <span class="hl">y</span> e o espaço reserva (<span class="hl">h</span>, <span class="hl">G</span>, <span class="hl">x</span>)</h1>
+
+<p class="intro">Para fechar o <code>sed</code>: o <code>y</code>, que troca letra por letra, e o espaço reserva, a memória do sed entre uma linha e outra.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Trocar caracteres com <code>y</code> (e tirar acentos).</li>
+<li>Os comandos do espaço reserva: <code>h</code>, <code>H</code>, <code>g</code>, <code>G</code> e <code>x</code>.</li>
+<li>Juntar linhas e inverter a ordem do arquivo.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: duas ferramentas a mais</h2>
+<p>Esta aula fecha o <code>sed</code> com dois recursos menos usados, mas que resolvem problemas que o <code>s</code> não resolve bem: o <code>y</code>, que troca caractere por caractere (como o <code>tr</code>), e o <strong>espaço reserva</strong> (<em>hold space</em>), uma segunda área de trabalho onde o <code>sed</code> guarda texto entre uma linha e outra.</p>
+<hr>
+<h2>1. <code>y</code>: trocar letras</h2>
+<p><code>y/origem/destino/</code> troca cada caractere da origem pelo da mesma posição no destino. Diferente do <code>tr</code>, o GNU sed entende acentos em UTF-8, então serve para tirar acentos:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ echo 'maçã e pão' | sed 'y/áãçé/aace/'
+maca e pao
+$ sed 'y/abc/ABC/' frutas.txt | head -3
+BAnAnA
+mAçã
+lArAnjA
+$</pre>
+<p>O <code>y</code> não aceita faixas: <code>y/a-z/A-Z/</code> trocaria só “a”, “-” e “z”. Para maiúsculas, use <code>s/.*/\U&amp;/</code>.</p>
+<hr>
+<h2>2. O espaço reserva: <code>h</code>, <code>H</code>, <code>g</code>, <code>G</code>, <code>x</code></h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Comando</th><th>O que faz</th></tr>
+<tr><td><code>h</code></td><td>copia o espaço padrão para o reserva (apaga o que havia lá)</td></tr>
+<tr><td><code>H</code></td><td>acrescenta o espaço padrão no reserva, com uma quebra de linha antes</td></tr>
+<tr><td><code>g</code></td><td>copia o reserva para o espaço padrão</td></tr>
+<tr><td><code>G</code></td><td>acrescenta o reserva no espaço padrão, com uma quebra de linha antes</td></tr>
+<tr><td><code>x</code></td><td>troca os dois de lugar</td></tr>
+</table></div>
+<p>O exemplo mais simples: <code>G</code> sozinho acrescenta o reserva, que está vazio, a cada linha. Resultado: uma linha em branco depois de cada linha (espaçamento duplo):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed G texto.txt
+O rato roeu a roupa do rei de Roma.
+
+A rainha, com raiva, rasgou o resto.
+
+O rato fugiu para o mato.
+
+Rato que é rato não volta.
+
+$</pre>
+<hr>
+<h2>3. Juntar todas as linhas numa só</h2>
+<p><code>H</code> vai acumulando cada linha no reserva; na última (<code>$</code>), o <code>x</code> traz tudo de volta, o <code>s</code> troca as quebras de linha (<code>\n</code>) por vírgulas e o <code>p</code> imprime:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -n 'H; ${x; s/\n/, /g; s/^, //; p}' frutas.txt
+banana, maçã, laranja, banana, uva, maçã, banana
+$</pre>
+<dl class="anatomy"><dt>H</dt><dd>em toda linha: guarda no reserva.</dd><dt>$</dt><dd>na última linha...</dd><dt>x</dt><dd>traz o reserva para o espaço padrão.</dd><dt>s/\n/, /g</dt><dd>quebras de linha viram vírgulas.</dd><dt>s/^, //</dt><dd>tira a vírgula do começo.</dd><dt>p</dt><dd>imprime.</dd></dl>
+<hr>
+<h2>4. Inverter a ordem das linhas</h2>
+<p>O clássico “<code>tac</code> feito com sed”: cada linha nova recebe as anteriores embaixo (<code>G</code>), o total vai para o reserva (<code>h</code>) e só a última linha imprime:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -n '1!G; h; $p' texto.txt
+Rato que é rato não volta.
+O rato fugiu para o mato.
+A rainha, com raiva, rasgou o resto.
+O rato roeu a roupa do rei de Roma.
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Tamanhos diferentes no y</strong>
+<p>Origem e destino do <code>y</code> precisam ter o mesmo número de caracteres:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed 'y/abc/xy/' frutas.txt
+sed: -e expressão #1, caractere 9: os textos para o comando `y' têm tamanhos diferentes (y/abc/z/)
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>y/abc/xyz/</code></td><td>troca a→x, b→y, c→z.</td></tr>
+<tr><td><code>sed G</code></td><td>espaçamento duplo.</td></tr>
+<tr><td><code>sed -n 'H; ${x; s/\n/,/g; p}'</code></td><td>junta as linhas (começa com vírgula).</td></tr>
+<tr><td><code>sed -n '1!G; h; $p'</code></td><td>inverte a ordem das linhas.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Trocar letras</h3><p>Complete para trocar a por 4 e e por 3:</p><div class="ex-code">sed '<input data-answer="y/ae/43/" aria-label="resposta">' frutas.txt</div></div><div class="exercise"><h3>2. Linha em branco</h3><p>Qual comando sozinho põe uma linha em branco depois de cada linha?</p><div class="ex-code">sed <input data-answer="G" aria-label="comando"> texto.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">3. O que o <code>h</code> faz?</p>
+<label><input type="radio" name="q3"> Imprime ajuda</label>
+<label><input type="radio" name="q3"> Copia o espaço padrão para o espaço reserva</label>
+<label><input type="radio" name="q3"> Apaga a linha</label>
+<label><input type="radio" name="q3"> Junta as linhas</label></div><div class="mc" data-answer="1"><p class="mc-q">4. Por que <code>y/a-z/A-Z/</code> não passa tudo para maiúsculas?</p>
+<label><input type="radio" name="q4"> Porque o y não aceita faixas: troca só a, - e z</label>
+<label><input type="radio" name="q4"> Porque falta o g</label>
+<label><input type="radio" name="q4"> Porque o y só funciona com números</label>
+<label><input type="radio" name="q4"> Porque precisa de -E</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\by/;;outre:^maca$;;outre:^laranja$">
+<p class="try-task"><strong>Missão:</strong> com o <code>y</code>, tire os acentos de <code>frutas.txt</code> (troque <code>ç</code> por <code>c</code> e <code>ã</code> por <code>a</code>).</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed 'y/çã/ca/' frutas.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+banana
+maca
+laranja
+banana
+uva
+maca
+banana
+</pre>
+</div><div class="trycmd" data-goal="src:\bG\b;;src:\bh\b;;outre:^Fábio\nCarla\nEduarda">
+<p class="try-task"><strong>Missão:</strong> inverta a ordem das linhas de <code>nomes.txt</code> com o espaço reserva.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed -n '1!G; h; $p' nomes.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+Fábio
+Carla
+Eduarda
+Bruno
+ana paula
+Diego
+Carla
+bruno
+Ana
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>O <code>y</code> troca caracteres um a um e entende acentos.</li>
+<li>O espaço reserva guarda texto entre as linhas.</li>
+<li><code>G</code>, <code>h</code> e <code>x</code> fazem truques que o <code>s</code> sozinho não faz.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

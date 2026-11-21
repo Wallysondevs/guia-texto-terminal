@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Endereços no sed: linha, faixa, $, regex e ! | Guia Texto no Terminal</title>
+<meta name="description" content="Endereços do sed: número de linha, faixas, a última linha $, endereços de regex, faixas com regex, negação ! e passo 1~2.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Endereços (<span class="hl">linha</span>, <span class="hl">faixa</span>, <span class="hl">/regex/</span>)</h1>
+
+<p class="intro">Endereços dizem em quais linhas um comando vale. Com eles, o <code>sed</code> edita só a linha 3, só as linhas com ERRO, ou tudo menos o cabeçalho.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Número de linha, faixa e <code>$</code>.</li>
+<li>Endereços de regex e faixas entre padrões.</li>
+<li>Negação com <code>!</code> e passo com <code>~</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: escolher as linhas</h2>
+<p>Todo comando do <code>sed</code> pode vir precedido de um <strong>endereço</strong>, que diz em quais linhas ele vale. Sem endereço, vale em todas. Os endereços servem para <code>p</code>, <code>s</code>, <code>d</code> e todos os outros.</p>
+<hr>
+<h2>1. Número de linha e faixa</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed '2s/caderno/CADERNO/' vendas.csv | head -3
+data,vendedor,produto,quantidade,preco
+2026-03-02,Ana,CADERNO,3,12.50
+2026-03-02,Bruno,caneta,10,2.00
+$ sed '2s/caderno/CADERNO/' vendas.csv | grep -i caderno
+2026-03-02,Ana,CADERNO,3,12.50
+2026-03-03,Diego,caderno,2,12.50
+2026-03-04,Carla,caderno,6,12.50
+2026-03-05,Ana,caderno,4,12.50
+$ sed -n '2,4p' notas.txt
+Bruno 6.0 5.5 7.0
+Carla 9.5 10.0 9.0
+Diego 4.0 6.5 5.0
+$</pre>
+<p>Repare no segundo comando: só a linha 2 ganhou “CADERNO”; os outros cadernos do arquivo continuaram minúsculos.</p>
+<dl class="anatomy"><dt>2</dt><dd>endereço: só a linha 2.</dd><dt>s/caderno/CADERNO/</dt><dd>o comando que vale nessa linha.</dd></dl>
+<hr>
+<h2>2. A última linha: <code>$</code></h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -n '$p' vendas.csv
+2026-03-05,Ana,caderno,4,12.50
+$ sed '$s/carla/CARLA/' log.txt | tail -2
+2026-03-02 11:02:15 AVISO disco 85% cheio
+2026-03-02 11:15:00 INFO  login usuario=CARLA
+$</pre>
+<hr>
+<h2>3. Uma regex: <code>/padrão/</code></h2>
+<p>Entre barras, o endereço vira “as linhas que casam com o padrão”. É o <code>grep</code> dentro do <code>sed</code>, com a vantagem de poder <strong>editar</strong> só essas linhas:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -n '/AVISO/p' log.txt
+2026-03-02 09:01:37 AVISO estoque baixo produto=caderno
+2026-03-02 11:02:15 AVISO disco 85% cheio
+$ sed '/ERRO/s/pagamento/PAGAMENTO/' log.txt | head -3
+2026-03-02 08:15:02 INFO  login usuario=ana
+2026-03-02 08:17:45 ERRO  falha no PAGAMENTO pedido=1042
+2026-03-02 08:20:11 INFO  pedido criado pedido=1043
+$</pre>
+<hr>
+<h2>4. Faixas com regex e misturadas</h2>
+<p>Uma faixa pode começar e terminar em padrões: de uma linha com “ERRO” até a próxima com “AVISO”. Quando a faixa fecha, o sed volta a procurar o começo, por isso o trecho se repetiu a partir do ERRO seguinte. Também dá para misturar número e regex (da linha 8 até a próxima com “carla”):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -n '/ERRO/,/AVISO/p' log.txt
+2026-03-02 08:17:45 ERRO  falha no pagamento pedido=1042
+2026-03-02 08:20:11 INFO  pedido criado pedido=1043
+2026-03-02 09:01:37 AVISO estoque baixo produto=caderno
+2026-03-02 09:12:03 ERRO  tempo esgotado no servidor de e-mail
+2026-03-02 10:30:44 INFO  logout usuario=ana
+2026-03-02 10:45:20 ERRO  falha no pagamento pedido=1047
+2026-03-02 11:02:15 AVISO disco 85% cheio
+$ sed -n '8,/carla/p' log.txt
+2026-03-02 10:45:20 ERRO  falha no pagamento pedido=1047
+2026-03-02 11:02:15 AVISO disco 85% cheio
+2026-03-02 11:15:00 INFO  login usuario=carla
+$</pre>
+<hr>
+<h2>5. Negação e passo</h2>
+<p>O <code>!</code> depois do endereço inverte: “todas as linhas <strong>menos</strong> essas”. O GNU sed também aceita <code>início~passo</code>: <code>1~2</code> são as linhas ímpares; <code>2~2</code>, as pares:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -n '/INFO/!p' log.txt
+2026-03-02 08:17:45 ERRO  falha no pagamento pedido=1042
+2026-03-02 09:01:37 AVISO estoque baixo produto=caderno
+2026-03-02 09:12:03 ERRO  tempo esgotado no servidor de e-mail
+2026-03-02 10:45:20 ERRO  falha no pagamento pedido=1047
+2026-03-02 11:02:15 AVISO disco 85% cheio
+$ sed -n '1~2p' nomes.txt
+Ana
+Carla
+ana paula
+Eduarda
+Fábio
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Linha zero</strong>
+<p>As linhas começam em 1. O endereço 0 só é aceito no formato especial <code>0,/regex/</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -n '0p' texto.txt
+sed: -e expressão #1, caractere 2: uso incorreto do endereço de linha 0
+$</pre>
+</div>
+<div class="cenario"><strong>Barra sem fechar no endereço</strong>
+<p>O endereço de regex também precisa das duas barras:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -n '/ERRO p' log.txt
+sed: -e expressão #1, caractere 7: a expressão regular do endereço está inacabada (falta a /)
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>3p</code></td><td>a linha 3.</td></tr>
+<tr><td><code>2,5p</code></td><td>linhas 2 a 5.</td></tr>
+<tr><td><code>$p</code></td><td>a última linha.</td></tr>
+<tr><td><code>/ERRO/p</code></td><td>linhas com ERRO.</td></tr>
+<tr><td><code>/A/,/B/p</code></td><td>de uma linha com A até a próxima com B.</td></tr>
+<tr><td><code>/INFO/!p</code></td><td>linhas sem INFO.</td></tr>
+<tr><td><code>1~2p</code></td><td>linhas ímpares (GNU).</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Só a linha 5</h3><p>Complete para imprimir só a linha 5:</p><div class="ex-code">sed -n '<input data-answer="5p" aria-label="resposta">' log.txt</div></div><div class="exercise"><h3>2. Faixa</h3><p>Complete para imprimir as linhas 2 a 6:</p><div class="ex-code">sed -n '<input data-answer="2,6p" aria-label="resposta">' log.txt</div></div><div class="exercise"><h3>3. Por padrão</h3><p>Complete para imprimir as linhas com ERRO:</p><div class="ex-code">sed -n '<input data-answer="/ERRO/p" aria-label="resposta">' log.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">4. O que <code>sed -n '/INFO/!p' log.txt</code> mostra?</p>
+<label><input type="radio" name="q4"> Só as linhas com INFO</label>
+<label><input type="radio" name="q4"> As linhas sem INFO</label>
+<label><input type="radio" name="q4"> Nada</label>
+<label><input type="radio" name="q4"> Um erro</label></div><div class="mc" data-answer="2"><p class="mc-q">5. No GNU sed, <code>1~2</code> significa:</p>
+<label><input type="radio" name="q5"> linhas 1 e 2</label>
+<label><input type="radio" name="q5"> linhas ímpares</label>
+<label><input type="radio" name="q5"> linhas pares</label>
+<label><input type="radio" name="q5"> da linha 1 à 2</label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\bsed\b;;src:-n;;src:/log;;out:logout usuario=ana;;out:login usuario=carla">
+<p class="try-task"><strong>Missão:</strong> com um endereço de regex, mostre só as linhas de <code>log.txt</code> que têm <code>logout</code> ou <code>login</code> (dica: <code>/log/</code> pega <code>log</code>in e <code>log</code>out).</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed -n '/log/p' log.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+2026-03-02 08:15:02 INFO  login usuario=ana
+2026-03-02 09:05:59 INFO  login usuario=bruno
+2026-03-02 10:30:44 INFO  logout usuario=ana
+2026-03-02 11:15:00 INFO  login usuario=carla
+</pre>
+</div><div class="trycmd" data-goal="src:\bsed\b;;src:1,5s;;out:08:17:45 FALHA;;out:10:45:20 ERRO">
+<p class="try-task"><strong>Missão:</strong> troque <code>ERRO</code> por <code>FALHA</code> só nas linhas 1 a 5 de <code>log.txt</code> (mostre o arquivo inteiro).</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed '1,5s/ERRO/FALHA/' log.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+2026-03-02 08:15:02 INFO  login usuario=ana
+2026-03-02 08:17:45 FALHA  falha no pagamento pedido=1042
+2026-03-02 08:20:11 INFO  pedido criado pedido=1043
+2026-03-02 09:01:37 AVISO estoque baixo produto=caderno
+2026-03-02 09:05:59 INFO  login usuario=bruno
+2026-03-02 09:12:03 ERRO  tempo esgotado no servidor de e-mail
+2026-03-02 10:30:44 INFO  logout usuario=ana
+2026-03-02 10:45:20 ERRO  falha no pagamento pedido=1047
+2026-03-02 11:02:15 AVISO disco 85% cheio
+2026-03-02 11:15:00 INFO  login usuario=carla
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>Sem endereço, o comando vale em todas as linhas.</li>
+<li><code>/regex/</code> escolhe as linhas pelo conteúdo.</li>
+<li><code>!</code> inverte o endereço.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

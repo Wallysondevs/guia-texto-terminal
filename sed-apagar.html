@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apagando linhas com sed (d) | Guia Texto no Terminal</title>
+<meta name="description" content="O comando d do sed: apagar por número, faixa, regex, comentários, linhas vazias, a última linha e tudo menos um padrão.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Apagando linhas (<span class="hl">d</span>)</h1>
+
+<p class="intro">O <code>d</code> joga a linha fora. Junto com os endereços, limpa arquivos: comentários, linhas vazias, cabeçalhos.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Apagar por número e faixa.</li>
+<li>Apagar comentários e linhas vazias.</li>
+<li>Apagar tudo menos as linhas que interessam.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: jogar linhas fora</h2>
+<p>O comando <code>d</code> (<em>delete</em>) descarta a linha: ela não é impressa e o <code>sed</code> já passa para a próxima. Junto com os endereços da aula anterior, é a forma mais rápida de limpar um arquivo: tirar comentários, linhas vazias, cabeçalho.</p>
+<hr>
+<h2>1. Apagar por número</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed '1d' vendas.csv | head -3
+2026-03-02,Ana,caderno,3,12.50   « o cabeçalho (linha 1) sumiu
+2026-03-02,Bruno,caneta,10,2.00
+2026-03-02,Carla,mochila,1,89.90
+$ sed '2,8d' log.txt
+2026-03-02 08:15:02 INFO  login usuario=ana
+2026-03-02 11:02:15 AVISO disco 85% cheio
+2026-03-02 11:15:00 INFO  login usuario=carla
+$</pre>
+<hr>
+<h2>2. Apagar comentários e linhas vazias</h2>
+<p>O <code>config.txt</code> tem comentários (linhas que começam com <code>#</code>) e uma linha vazia. <code>/^#/d</code> apaga as primeiras; <code>/^$/d</code>, as vazias (começo e fim colados):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cat config.txt
+# Configuração do site da loja
+nome=Loja da Ana
+porta=8080
+debug=sim
+# e-mail de contato
+email=contato@lojadaana.example
+
+tema=claro
+idioma=pt-BR
+$ sed '/^#/d' config.txt
+nome=Loja da Ana
+porta=8080
+debug=sim
+email=contato@lojadaana.example
+
+tema=claro
+idioma=pt-BR
+$ sed '/^#/d; /^$/d' config.txt
+nome=Loja da Ana
+porta=8080
+debug=sim
+email=contato@lojadaana.example
+tema=claro
+idioma=pt-BR
+$</pre>
+<dl class="anatomy"><dt>/^#/</dt><dd>endereço: linhas que começam com #.</dd><dt>d</dt><dd>apaga.</dd><dt>;</dt><dd>separa dois comandos.</dd><dt>/^$/d</dt><dd>apaga as linhas vazias.</dd></dl>
+<hr>
+<h2>3. Apagar tudo menos...</h2>
+<p>Com <code>!</code>, o <code>d</code> apaga as linhas que <strong>não</strong> casam. <code>/ERRO/!d</code> é o mesmo que <code>grep ERRO</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed '/ERRO/!d' log.txt
+2026-03-02 08:17:45 ERRO  falha no pagamento pedido=1042
+2026-03-02 09:12:03 ERRO  tempo esgotado no servidor de e-mail
+2026-03-02 10:45:20 ERRO  falha no pagamento pedido=1047
+$</pre>
+<hr>
+<h2>4. Apagar a última linha</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed '$d' nomes.txt
+Ana
+bruno
+Carla
+Diego
+ana paula
+Bruno
+Eduarda
+Carla
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Regex sem fechar</strong>
+<p>No endereço <code>/^#/</code>, esquecer a barra de fechamento faz o sed achar que o <code>d</code> ainda é parte do padrão:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed '/^#d' config.txt
+sed: -e expressão #1, caractere 4: a expressão regular do endereço está inacabada (falta a /)
+$</pre>
+</div>
+<div class="cenario"><strong>O d não leva texto</strong>
+<p>O <code>d</code> é um comando sozinho; texto depois dele vira lixo:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed '1d linha' vendas.csv
+sed: -e expressão #1, caractere 4: há caracteres sobrando após o comando
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>1d</code></td><td>apaga a linha 1.</td></tr>
+<tr><td><code>2,8d</code></td><td>apaga as linhas 2 a 8.</td></tr>
+<tr><td><code>$d</code></td><td>apaga a última.</td></tr>
+<tr><td><code>/^#/d</code></td><td>apaga comentários.</td></tr>
+<tr><td><code>/^$/d</code></td><td>apaga linhas vazias.</td></tr>
+<tr><td><code>/ERRO/!d</code></td><td>apaga tudo que não tem ERRO.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. O cabeçalho</h3><p>Complete para apagar a linha 1:</p><div class="ex-code">sed '<input data-answer="1d" aria-label="resposta">' vendas.csv</div></div><div class="exercise"><h3>2. Linhas vazias</h3><p>Complete o endereço das linhas vazias:</p><div class="ex-code">sed '<input data-answer="/^$/" aria-label="endereço">d' config.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">3. <code>sed '/ERRO/!d' log.txt</code> é parecido com:</p>
+<label><input type="radio" name="q3"> <code>grep -v ERRO log.txt</code></label>
+<label><input type="radio" name="q3"> <code>grep ERRO log.txt</code></label>
+<label><input type="radio" name="q3"> <code>cat log.txt</code></label>
+<label><input type="radio" name="q3"> <code>wc -l log.txt</code></label></div><div class="mc" data-answer="2"><p class="mc-q">4. Qual endereço pega as linhas de comentário que começam com <code>#</code>?</p>
+<label><input type="radio" name="q4"> <code>/#$/</code></label>
+<label><input type="radio" name="q4"> <code>/^#/</code></label>
+<label><input type="radio" name="q4"> <code>#d</code></label>
+<label><input type="radio" name="q4"> <code>/#/!</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\bsed\b;;src:\^#;;src:\^\$;;outre:^nome=Loja da Ana$;;outre:^idioma=pt-BR$">
+<p class="try-task"><strong>Missão:</strong> mostre <code>config.txt</code> sem os comentários e sem a linha vazia.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed '/^#/d; /^$/d' config.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+nome=Loja da Ana
+porta=8080
+debug=sim
+email=contato@lojadaana.example
+tema=claro
+idioma=pt-BR
+</pre>
+</div><div class="trycmd" data-goal="src:\bsed\b;;src:/INFO/d;;out:AVISO disco 85% cheio;;out:ERRO  tempo esgotado">
+<p class="try-task"><strong>Missão:</strong> apague todas as linhas de <code>log.txt</code> que têm <code>INFO</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed '/INFO/d' log.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+2026-03-02 08:17:45 ERRO  falha no pagamento pedido=1042
+2026-03-02 09:01:37 AVISO estoque baixo produto=caderno
+2026-03-02 09:12:03 ERRO  tempo esgotado no servidor de e-mail
+2026-03-02 10:45:20 ERRO  falha no pagamento pedido=1047
+2026-03-02 11:02:15 AVISO disco 85% cheio
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>d</code> descarta a linha e pula para a próxima.</li>
+<li><code>/^#/d; /^$/d</code> limpa um arquivo de configuração.</li>
+<li><code>/padrão/!d</code> funciona como o <code>grep</code>.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

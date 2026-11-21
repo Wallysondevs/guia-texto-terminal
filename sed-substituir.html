@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Substituindo texto com sed (s///) | Guia Texto no Terminal</title>
+<meta name="description" content="O comando s do sed: localizar e substituir, trocar o separador, usar regex no padrão e o &amp; no texto de troca, com erros reais.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Substituindo (<span class="hl">s///</span>)</h1>
+
+<p class="intro">O <code>s</code> é o comando mais famoso do <code>sed</code>: localiza um padrão e troca por outro texto, linha por linha.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>A forma <code>s/padrão/troca/</code>.</li>
+<li>Trocar o separador para lidar com barras.</li>
+<li>Usar regex no padrão e <code>&amp;</code> na troca.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>A ideia: localizar e substituir</h2>
+<p>O comando mais usado do <code>sed</code> é o <code>s</code> (<em>substitute</em>). Ele procura um padrão em cada linha e troca pelo texto que você mandar. É o “localizar e substituir” do editor, só que automático e para quantos arquivos você quiser.</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed 's/rato/gato/' texto.txt
+O gato roeu a roupa do rei de Roma.
+A rainha, com raiva, rasgou o resto.
+O gato fugiu para o mato.
+Rato que é gato não volta.
+$</pre>
+<dl class="anatomy"><dt>s</dt><dd>o comando de substituição.</dd><dt>/rato/</dt><dd>o padrão procurado (pode ser regex).</dd><dt>gato/</dt><dd>o texto que entra no lugar.</dd><dt>texto.txt</dt><dd>o arquivo.</dd></dl>
+<p>Duas coisas para reparar: só a <strong>primeira</strong> ocorrência de cada linha foi trocada (na última linha, o segundo “rato” continuou), e “Rato” com maiúscula não foi tocado. As <em>flags</em> da próxima aula resolvem as duas coisas.</p>
+<hr>
+<h2>1. Num pipe</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ echo 'Olá, mundo' | sed 's/mundo/Ana/'
+Olá, Ana
+$ grep tema config.txt | sed 's/claro/escuro/'
+tema=escuro
+$</pre>
+<hr>
+<h2>2. Trocando o separador</h2>
+<p>A barra <code>/</code> é só costume: o caractere logo depois do <code>s</code> vira o separador. Para trabalhar com caminhos, que têm muitas barras, use <code>#</code> ou <code>|</code> e evite escapar cada barra com <code>\/</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ echo /home/ana/docs/notas.txt | sed 's/\/home\/ana/~/'
+~/docs/notas.txt
+$ echo /home/ana/docs/notas.txt | sed 's#/home/ana#~#'
+~/docs/notas.txt
+$</pre>
+<hr>
+<h2>3. O padrão é uma regex</h2>
+<p>O que vem entre as duas primeiras barras é uma expressão regular (a <a href="regex.html">aula de regex</a> do Nível 1). Aqui, <code>[0-9]*</code> pega o número do pedido inteiro:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep pedido= log.txt | sed 's/pedido=[0-9]*/pedido=XXXX/'
+2026-03-02 08:17:45 ERRO  falha no pagamento pedido=XXXX
+2026-03-02 08:20:11 INFO  pedido criado pedido=XXXX
+2026-03-02 10:45:20 ERRO  falha no pagamento pedido=XXXX
+$</pre>
+<hr>
+<h2>4. O <code>&amp;</code>: o pedaço que casou</h2>
+<p>No texto de troca, <code>&amp;</code> significa “o que o padrão encontrou”. Dá para embrulhar o achado sem reescrevê-lo:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed 's/[0-9][0-9]*/[&amp;]/' notas.txt
+Ana [8].5 9.0 7.5
+Bruno [6].0 5.5 7.0
+Carla [9].5 10.0 9.0
+Diego [4].0 6.5 5.0
+Eduarda [7].0 8.0 8.5
+$ echo 'preço: 12.50' | sed 's/[0-9.]*$/R$ &amp;/'
+preço: R$ 12.50
+$</pre>
+<p>Para um <code>&amp;</code> de verdade no texto, escreva <code>\&amp;</code>.</p>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Faltou a última barra</strong>
+<p>O <code>s</code> precisa de três separadores: <code>s/padrão/troca/</code>. Faltando o último, o sed reclama:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed 's/rato/gato' texto.txt
+sed: -e expressão #1, caractere 11: comando `s' inacabado (s/// - faltou delimitador)
+$</pre>
+</div>
+<div class="cenario"><strong>Barra no meio do texto</strong>
+<p>Se o padrão ou a troca tiver uma barra, ela fecha o comando antes da hora. Aqui o sed achou que <code>ana/</code> eram as flags:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ echo /home/ana | sed 's//home/ana/~/'
+sed: -e expressão #1, caractere 9: opção desconhecida para o comando `s' (s///?)
+$</pre>
+<p>Escape a barra (<code>\/</code>) ou troque o separador: <code>s#/home/ana#~#</code>.</p></div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>sed 's/a/b/' arq</code></td><td>troca o 1º a por b em cada linha.</td></tr>
+<tr><td><code>sed 's#/x#/y#' arq</code></td><td>o mesmo, com # de separador.</td></tr>
+<tr><td><code>sed 's/[0-9]*/N/' arq</code></td><td>padrão com regex.</td></tr>
+<tr><td><code>sed 's/x/[&amp;]/' arq</code></td><td>& é o que casou.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. O comando</h3><p>Complete para trocar rato por gato:</p><div class="ex-code">sed '<input data-answer="s/rato/gato/" aria-label="resposta">' texto.txt</div></div><div class="exercise"><h3>2. O que casou</h3><p>Qual símbolo, no texto de troca, representa o que o padrão encontrou?</p><div class="ex-code">sed 's/[0-9]*/(<input data-answer="&amp;" aria-label="símbolo">)/' notas.txt</div></div><div class="mc" data-answer="2"><p class="mc-q">3. Sem flags, quantas ocorrências por linha o <code>s</code> troca?</p>
+<label><input type="radio" name="q3"> Todas</label>
+<label><input type="radio" name="q3"> Só a primeira</label>
+<label><input type="radio" name="q3"> Só a última</label>
+<label><input type="radio" name="q3"> Nenhuma</label></div><div class="mc" data-answer="2"><p class="mc-q">4. Qual comando troca <code>/home/ana</code> por <code>~</code> sem escapar barras?</p>
+<label><input type="radio" name="q4"> <code>s/home/ana/~/</code></label>
+<label><input type="radio" name="q4"> <code>s#/home/ana#~#</code></label>
+<label><input type="radio" name="q4"> <code>s/\home\ana/~/</code></label>
+<label><input type="radio" name="q4"> <code>y/home/~/</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:\bsed\b;;src:s/claro/escuro/;;out:tema=escuro;;out:porta=8080">
+<p class="try-task"><strong>Missão:</strong> troque <code>claro</code> por <code>escuro</code> em <code>config.txt</code> (mostre o arquivo inteiro com a troca).</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed 's/claro/escuro/' config.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+# Configuração do site da loja
+nome=Loja da Ana
+porta=8080
+debug=sim
+# e-mail de contato
+email=contato@lojadaana.example
+
+tema=escuro
+idioma=pt-BR
+</pre>
+</div><div class="trycmd" data-goal="src:\bsed\b;;src:s.8080.9090.;;out:porta=9090;;out:nome=Loja da Ana">
+<p class="try-task"><strong>Missão:</strong> em <code>config.txt</code>, troque o número da porta <code>8080</code> por <code>9090</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+sed 's/8080/9090/' config.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+# Configuração do site da loja
+nome=Loja da Ana
+porta=9090
+debug=sim
+# e-mail de contato
+email=contato@lojadaana.example
+
+tema=claro
+idioma=pt-BR
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>s/padrão/troca/</code> troca a primeira ocorrência de cada linha.</li>
+<li>O separador pode ser qualquer caractere: <code>s#a#b#</code>.</li>
+<li><code>&amp;</code> repete o que o padrão encontrou.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>
