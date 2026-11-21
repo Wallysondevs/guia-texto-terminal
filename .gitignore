@@ -5,3 +5,4 @@ node_modules/
 tools/node_modules/
 *.bak
 __pycache__/
+QUADRO.md
