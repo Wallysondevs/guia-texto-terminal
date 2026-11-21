@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeto: relatório de vendas de um CSV com awk e sed | Guia Texto no Terminal</title>
+<meta name="description" content="Projeto prático: totais por vendedor, por produto e por dia de um CSV de vendas com awk, e vírgula decimal com sed.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Projeto: relatório de <span class="hl">vendas</span></h1>
+
+<p class="intro">Planilha exportada em CSV é rotina em qualquer empresa. Este projeto tira do <code>vendas.csv</code> um relatório pronto para mandar ao chefe.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Somar e agrupar colunas de CSV com <code>awk</code>.</li>
+<li>Filtrar um dia com <code>grep</code>.</li>
+<li>Formatar valores com vírgula decimal usando <code>sed</code>.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>O problema</h2>
+<p>O <code>vendas.csv</code> tem uma venda por linha: data, vendedor, produto, quantidade e preço unitário. O pedido: <em>total geral, total por vendedor, o produto que mais saiu e um relatório com vírgula decimal, do jeito brasileiro.</em></p>
+<hr>
+<h2>1. Conhecer o arquivo</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ head -3 vendas.csv
+data,vendedor,produto,quantidade,preco
+2026-03-02,Ana,caderno,3,12.50
+2026-03-02,Bruno,caneta,10,2.00
+$ wc -l &lt; vendas.csv
+13
+$</pre>
+<p>13 linhas: 1 cabeçalho e 12 vendas. O valor de cada venda é quantidade × preço, ou <code>$4 * $5</code> com <code>-F,</code>.</p>
+<hr>
+<h2>2. Total geral</h2>
+<p><code>NR > 1</code> pula o cabeçalho; o <code>END</code> imprime a soma com duas casas:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, 'NR &gt; 1 {t += $4 * $5} END {printf &quot;%.2f\n&quot;, t}' vendas.csv
+722.10
+$</pre>
+<hr>
+<h2>3. Por vendedor e por produto</h2>
+<p>Um array com o nome como índice acumula o total de cada um. O <code>sort -k2 -rn</code> ordena pela 2ª coluna, do maior para o menor:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, 'NR &gt; 1 {v[$2] += $4 * $5} END {for (n in v) printf &quot;%s %.2f\n&quot;, n, v[n]}' vendas.csv | sort -k2 -rn
+Ana 277.30
+Carla 209.90
+Bruno 169.90
+Diego 65.00
+$ awk -F, 'NR &gt; 1 {q[$3] += $4} END {for (p in q) print q[p], p}' vendas.csv | sort -rn
+35 caneta
+15 caderno
+7 estojo
+4 mochila
+$</pre>
+<hr>
+<h2>4. Um dia só</h2>
+<p>O <code>grep</code> filtra as linhas do dia e o <code>awk</code> soma (aqui não há cabeçalho para pular, porque o grep já o tirou):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep '^2026-03-04' vendas.csv | awk -F, '{t += $4 * $5} END {printf &quot;%.2f\n&quot;, t}'
+294.80
+$</pre>
+<hr>
+<h2>5. Vírgula decimal</h2>
+<p>O <code>printf</code> do awk usa ponto. Um <code>sed</code> no fim troca o ponto pela vírgula. Lembre do <code>\.</code>: o ponto sozinho, na regex, é “qualquer caractere”:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, 'NR &gt; 1 {t += $4 * $5} END {printf &quot;%.2f\n&quot;, t}' vendas.csv | sed 's/\./,/'
+722,10
+$</pre>
+<hr>
+<h2>6. O relatório completo</h2>
+<p>O <code>relatorio-vendas.sh</code> faz tudo numa passada só do <code>awk</code> e usa o <code>PROCINFO["sorted_in"]</code> do gawk para sair já ordenado. No fim, um <code>sed</code> troca o ponto pela vírgula só nos valores (o ponto seguido de dois dígitos no fim da linha):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cat relatorio-vendas.sh
+#!/usr/bin/env bash
+# relatorio-vendas.sh: relatório do vendas.csv (projeto do Nível 5)
+arq=&quot;${1:-vendas.csv}&quot;
+awk -F, '
+NR == 1 { next }
+{
+    total = $4 * $5
+    por_vendedor[$2] += total
+    por_dia[$1] += total
+    geral += total
+}
+END {
+    print &quot;VENDAS POR VENDEDOR&quot;
+    PROCINFO[&quot;sorted_in&quot;] = &quot;@val_num_desc&quot;
+    for (v in por_vendedor) printf &quot;  %-8s R$ %8.2f\n&quot;, v, por_vendedor[v]
+    print &quot;VENDAS POR DIA&quot;
+    PROCINFO[&quot;sorted_in&quot;] = &quot;@ind_str_asc&quot;
+    for (d in por_dia) printf &quot;  %s R$ %8.2f\n&quot;, d, por_dia[d]
+    printf &quot;TOTAL GERAL      R$ %8.2f\n&quot;, geral
+}' &quot;$arq&quot; | sed 's/\([0-9]\)\.\([0-9][0-9]\)$/\1,\2/'
+$ bash relatorio-vendas.sh
+VENDAS POR VENDEDOR
+  Ana      R$   277,30
+  Carla    R$   209,90
+  Bruno    R$   169,90
+  Diego    R$    65,00
+VENDAS POR DIA
+  2026-03-02 R$   147,40
+  2026-03-03 R$    95,00
+  2026-03-04 R$   294,80
+  2026-03-05 R$   184,90
+TOTAL GERAL      R$   722,10
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Esqueceu o -F,</strong>
+<p>Sem <code>-F,</code>, o awk separa por espaços. Cada linha vira um campo só, <code>$4</code> e <code>$5</code> ficam vazios e a conta dá 0, sem nenhuma mensagem de erro:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{t += $4 * $5} END {print t}' vendas.csv
+0
+$</pre>
+</div>
+<div class="cenario"><strong>Ponto sem barra no sed</strong>
+<p>Sem a barra, o <code>.</code> casa com o primeiro caractere da linha, que é o 7:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, 'NR &gt; 1 {t += $4 * $5} END {printf &quot;%.2f\n&quot;, t}' vendas.csv | sed 's/./,/'
+,22.10
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>awk -F, 'NR &gt; 1 {t += $4 * $5}'</code></td><td>soma o valor das vendas.</td></tr>
+<tr><td><code>v[$2] += …</code></td><td>acumula por vendedor.</td></tr>
+<tr><td><code>sort -k2 -rn</code></td><td>ordena pela 2ª coluna, números, do maior.</td></tr>
+<tr><td><code>sed 's/\./,/'</code></td><td>ponto vira vírgula.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Valor da venda</h3><p>Com <code>-F,</code>, como calcular quantidade × preço?</p><div class="ex-code">awk -F, '{print <input data-answer="$4 * $5" aria-label="conta">}' vendas.csv</div></div><div class="exercise"><h3>2. Pular o cabeçalho</h3><p>Qual padrão pula a primeira linha?</p><div class="ex-code">awk -F, '<input data-answer="NR &gt; 1" aria-label="padrão"> {print $2}' vendas.csv</div></div><div class="mc" data-answer="2"><p class="mc-q">3. Sem <code>-F,</code>, o total das vendas deu 0 porque:</p>
+<label><input type="radio" name="q3"> o awk não sabe multiplicar</label>
+<label><input type="radio" name="q3"> o awk separou por espaços e os campos 4 e 5 ficaram vazios</label>
+<label><input type="radio" name="q3"> o arquivo tem cabeçalho</label>
+<label><input type="radio" name="q3"> faltou o printf</label></div><div class="mc" data-answer="2"><p class="mc-q">4. Para trocar o ponto decimal por vírgula com sed, use:</p>
+<label><input type="radio" name="q4"> <code>s/./,/</code></label>
+<label><input type="radio" name="q4"> <code>s/\./,/</code></label>
+<label><input type="radio" name="q4"> <code>s/,/./</code></label>
+<label><input type="radio" name="q4"> <code>y/,/./</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:awk;;src:Carla;;outre:^209\.90$">
+<p class="try-task"><strong>Missão:</strong> calcule o total vendido pela Carla, com duas casas.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk -F, '$2 == &quot;Carla&quot; {t += $4 * $5} END {printf &quot;%.2f\n&quot;, t}' vendas.csv
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+209.90
+</pre>
+</div><div class="trycmd" data-goal="src:awk;;src:caneta;;outre:^35$">
+<p class="try-task"><strong>Missão:</strong> some quantas canetas foram vendidas (coluna 4).</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk -F, '$3 == &quot;caneta&quot; {q += $4} END {print q}' vendas.csv
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+35
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li><code>-F,</code> e <code>NR > 1</code> em todo CSV com cabeçalho.</li>
+<li>Array com índice de texto agrupa.</li>
+<li>Ponto na regex precisa de <code>\.</code>.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

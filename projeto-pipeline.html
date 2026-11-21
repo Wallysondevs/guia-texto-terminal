@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeto final: grep, sed, awk e jq no mesmo pipeline | Guia Texto no Terminal</title>
+<meta name="description" content="Projeto final: cruzar um log de texto com um JSON, converter CSV em JSON com awk e jq, e montar um painel em Bash.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Projeto final: <span class="hl">tudo junto</span></h1>
+
+<p class="intro">O projeto final cruza os três tipos de arquivo da loja: log de texto, CSV e JSON. Cada ferramenta faz a parte em que é melhor.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Levar dados do texto para o <code>jq</code> com um <code>for</code>.</li>
+<li>Escrever JSON com <code>awk</code> e agrupar com <code>jq -s</code>.</li>
+<li>Escolher a ferramenta certa para cada tarefa.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>O problema</h2>
+<p>O log do sistema (<code>log.txt</code>) diz que dois pagamentos falharam. Quem eram esses clientes? A resposta está no <code>pedidos.json</code>. E, de quebra, o chefe quer o total por vendedor em JSON, para mandar a outro sistema. É hora de juntar <code>grep</code>, <code>sed</code>, <code>awk</code> e <code>jq</code>.</p>
+<hr>
+<h2>1. Tirar os números dos pedidos do log</h2>
+<p><code>grep</code> acha as linhas; <code>sed</code> apaga tudo até <code>pedido=</code>, sobrando só o número:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep 'falha no pagamento' log.txt | sed -E 's/.*pedido=//'
+1042
+1047
+$</pre>
+<hr>
+<h2>2. Procurar cada pedido no JSON</h2>
+<p>Um <code>for</code> passa por cada número e o <code>jq</code> procura o pedido com <code>--argjson</code> (o id é número). Com <code>-e</code>, o jq sai com erro quando não acha nada, e o <code>||</code> avisa:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ for id in $(grep 'falha no pagamento' log.txt | sed -E 's/.*pedido=//'); do jq -e -r --argjson id &quot;$id&quot; '.pedidos[] | select(.id == $id) | &quot;\(.id) \(.cliente) \(.status)&quot;' pedidos.json || echo &quot;$id não está no pedidos.json&quot;; done
+1042 Bruno pago
+1047 não está no pedidos.json
+$</pre>
+<p>O pedido 1047 está no log, mas não no <code>pedidos.json</code>: uma pista de que a exportação está desatualizada. Achar isso à mão, num log grande, levaria muito mais tempo.</p>
+<hr>
+<h2>3. De CSV para JSON</h2>
+<p>Agora o caminho contrário. O <code>awk</code> escreve um objeto JSON por linha (as aspas do JSON vão com <code>\"</code> dentro do printf):</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, 'NR &gt; 1 {printf &quot;{\&quot;vendedor\&quot;:\&quot;%s\&quot;,\&quot;valor\&quot;:%s}\n&quot;, $2, $4 * $5}' vendas.csv | head -3
+{&quot;vendedor&quot;:&quot;Ana&quot;,&quot;valor&quot;:37.5}
+{&quot;vendedor&quot;:&quot;Bruno&quot;,&quot;valor&quot;:20}
+{&quot;vendedor&quot;:&quot;Carla&quot;,&quot;valor&quot;:89.9}
+$</pre>
+<p>E o <code>jq -s</code> junta todos numa lista, agrupa por vendedor e soma:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk -F, 'NR &gt; 1 {printf &quot;{\&quot;vendedor\&quot;:\&quot;%s\&quot;,\&quot;valor\&quot;:%s}\n&quot;, $2, $4 * $5}' vendas.csv | jq -s -c 'group_by(.vendedor) | map({vendedor: .[0].vendedor, total: (map(.valor) | add)})'
+[{&quot;vendedor&quot;:&quot;Ana&quot;,&quot;total&quot;:277.3},{&quot;vendedor&quot;:&quot;Bruno&quot;,&quot;total&quot;:169.9},{&quot;vendedor&quot;:&quot;Carla&quot;,&quot;total&quot;:209.9},{&quot;vendedor&quot;:&quot;Diego&quot;,&quot;total&quot;:65}]
+$</pre>
+<hr>
+<h2>4. O painel</h2>
+<p>O <code>painel.sh</code> é o projeto final: cada linha usa a ferramenta certa para o arquivo certo, e o resultado é um resumo da loja inteira:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cat painel.sh
+#!/usr/bin/env bash
+# painel.sh: resumo dos arquivos da loja (projeto final do Nível 5)
+echo &quot;== Painel da Papelaria ==&quot;
+echo &quot;Erros no log do sistema: $(grep -c ERRO log.txt)&quot;
+echo &quot;Respostas 5xx no site:   $(awk '$9 &gt;= 500' acesso.log | wc -l)&quot;
+total=$(awk -F, 'NR &gt; 1 {t += $4 * $5} END {printf &quot;%.2f&quot;, t}' vendas.csv | tr . ,)
+echo &quot;Vendas no CSV:           R\$ $total&quot;
+echo &quot;Pedidos pagos no JSON:   $(jq '[.pedidos[] | select(.status == &quot;pago&quot;)] | length' pedidos.json)&quot;
+echo &quot;Pagamentos que falharam:&quot;
+grep 'falha no pagamento' log.txt | sed -E 's/^([0-9-]+) ([0-9:]+).*pedido=([0-9]+)$/  \1 \2  pedido \3/'
+$ bash painel.sh
+== Painel da Papelaria ==
+Erros no log do sistema: 3
+Respostas 5xx no site:   2
+Vendas no CSV:           R$ 722,10
+Pedidos pagos no JSON:   2
+Pagamentos que falharam:
+  2026-03-02 08:17:45  pedido 1042
+  2026-03-02 10:45:20  pedido 1047
+$</pre>
+<hr>
+<h2>Qual ferramenta, quando?</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Tarefa</th><th>Ferramenta</th></tr>
+<tr><td>achar linhas</td><td><code>grep</code></td></tr>
+<tr><td>trocar ou recortar texto numa linha</td><td><code>sed</code></td></tr>
+<tr><td>colunas, contas, contagens, relatórios</td><td><code>awk</code></td></tr>
+<tr><td>qualquer coisa em JSON</td><td><code>jq</code></td></tr>
+<tr><td>ordenar e contar repetidos</td><td><code>sort</code> e <code>uniq -c</code></td></tr>
+</table></div>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>--arg em vez de --argjson</strong>
+<p>Com <code>--arg</code>, o id vira o texto <code>"1042"</code>, que nunca é igual ao número 1042 do JSON. Não sai nada e nenhum erro aparece, só o “fim”:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ for id in $(grep 'falha no pagamento' log.txt | sed -E 's/.*pedido=//'); do jq -r --arg id &quot;$id&quot; '.pedidos[] | select(.id == $id) | .cliente' pedidos.json; done; echo fim
+fim
+$</pre>
+</div>
+<div class="cenario"><strong>\d no sed</strong>
+<p>O <code>sed</code> não conhece <code>\d</code> (isso é do Perl e do Python). A regex não casa e a linha sai inteira, sem troca. Use <code>[0-9]</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ grep 'falha no pagamento' log.txt | sed -E 's/.*pedido=(\d+)$/\1/'
+2026-03-02 08:17:45 ERRO  falha no pagamento pedido=1042
+2026-03-02 10:45:20 ERRO  falha no pagamento pedido=1047
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>for id in $(…); do jq … ; done</code></td><td>um jq por item.</td></tr>
+<tr><td><code>jq -e … || echo …</code></td><td>avisa quando não acha.</td></tr>
+<tr><td><code>awk '{printf &quot;{…}\n&quot;}' | jq -s</code></td><td>texto vira lista JSON.</td></tr>
+<tr><td><code>bash painel.sh</code></td><td>o resumo da loja.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Id como número</h3><p>Qual opção passa o id ao jq como número?</p><div class="ex-code">jq <input data-answer="--argjson" aria-label="opção"> id 1042 '.pedidos[] | select(.id == $id)' pedidos.json</div></div><div class="exercise"><h3>2. Juntar a entrada</h3><p>Qual opção do jq junta todos os objetos numa lista?</p><div class="ex-code">awk … | jq <input data-answer="-s" aria-label="opção"> 'length'</div></div><div class="mc" data-answer="2"><p class="mc-q">3. No sed, para casar um dígito, use:</p>
+<label><input type="radio" name="q3"> <code>\d</code></label>
+<label><input type="radio" name="q3"> <code>[0-9]</code></label>
+<label><input type="radio" name="q3"> <code>%d</code></label>
+<label><input type="radio" name="q3"> <code>#</code></label></div><div class="mc" data-answer="2"><p class="mc-q">4. Para contar quantas vezes cada IP aparece num log, a melhor dupla é:</p>
+<label><input type="radio" name="q4"> <code>jq</code> e <code>sed</code></label>
+<label><input type="radio" name="q4"> <code>awk</code> para a coluna e <code>sort | uniq -c</code></label>
+<label><input type="radio" name="q4"> <code>grep -c</code> sozinho</label>
+<label><input type="radio" name="q4"> <code>cat</code> e <code>tr</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:grep;;src:ERRO;;outre:^3$">
+<p class="try-task"><strong>Missão:</strong> conte quantas linhas de nível ERRO o <code>log.txt</code> tem.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+grep -c ERRO log.txt
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+3
+</pre>
+</div><div class="trycmd" data-goal="src:awk;;src:jq -s;;outre:^277\.3$">
+<p class="try-task"><strong>Missão:</strong> transforme o <code>vendas.csv</code> em JSON com awk e use o jq para somar só as vendas da Ana.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk -F, 'NR &gt; 1 {printf &quot;{\&quot;vendedor\&quot;:\&quot;%s\&quot;,\&quot;valor\&quot;:%s}\n&quot;, $2, $4 * $5}' vendas.csv | jq -s 'map(select(.vendedor == &quot;Ana&quot;) | .valor) | add'
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+277.3
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>Cada ferramenta tem seu forte: grep acha, sed troca, awk conta, jq entende JSON.</li>
+<li>Número e texto são diferentes no jq: <code>--argjson</code> para números.</li>
+<li>O <code>sed</code> usa <code>[0-9]</code>, não <code>\d</code>.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

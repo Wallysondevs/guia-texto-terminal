@@ -78,6 +78,14 @@ var NIVEIS = [
       ["jq-arg.html", "Variáveis de fora (--arg, --argjson)"],
       ["jq-null.html", "null, //, ? e try"]
     ]}
+  ]},
+  { id: "n5", nome: "Nível 5 · Projetos", curto: "Projetos", desc: "Tarefas reais juntando grep, sed, awk e jq", grupos: [
+    { grupo: "Projetos", itens: [
+      ["projeto-log.html", "Analisar um log de acesso"],
+      ["projeto-vendas.html", "Relatório de vendas (CSV)"],
+      ["projeto-json-csv.html", "De JSON para planilha"],
+      ["projeto-pipeline.html", "Tudo junto: grep, sed, awk e jq"]
+    ]}
   ]}
 ];
 /* fim-NIVEIS */

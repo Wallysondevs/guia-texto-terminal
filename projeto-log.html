@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeto: analisar um log de acesso com awk, sort e uniq | Guia Texto no Terminal</title>
+<meta name="description" content="Projeto prático: contar visitas, status, IPs e erros de um log de acesso com awk, grep, sed, sort e uniq, e juntar tudo num script.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Projeto: analisar um <span class="hl">log</span></h1>
+
+<p class="intro">Logs são o texto que mais aparece na vida de quem cuida de sistemas. Neste projeto, um log de site vira um relatório, passo a passo.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Ler os campos de um log de acesso.</li>
+<li>Contar por status e por IP com <code>sort | uniq -c</code>.</li>
+<li>Montar um script de relatório que confere o arquivo.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>O problema</h2>
+<p>O site da papelaria grava cada visita no <code>acesso.log</code>, no formato que servidores como Apache e Nginx usam. A pergunta do chefe: <em>quantas visitas, quantos erros, quem mais acessou, e o que quebrou?</em> Vamos responder com uma ferramenta por vez e, no fim, juntar tudo num script.</p>
+<hr>
+<h2>1. Olhar antes de mexer</h2>
+<p>Sempre comece vendo algumas linhas e contando o total:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ head -3 acesso.log
+192.168.0.12 - - [02/Mar/2026:08:15:02 -0300] &quot;GET /index.html HTTP/1.1&quot; 200 5120
+192.168.0.15 - - [02/Mar/2026:08:15:09 -0300] &quot;GET /produtos.html HTTP/1.1&quot; 200 8340
+192.168.0.12 - - [02/Mar/2026:08:16:30 -0300] &quot;GET /carrinho.html HTTP/1.1&quot; 200 2210
+$ wc -l &lt; acesso.log
+12
+$</pre>
+<p>Separando por espaços, cada linha tem estes campos (os que o <code>awk</code> enxerga como <code>$1</code>, <code>$2</code>…):</p>
+<dl class="anatomy"><dt>$1</dt><dd>o IP de quem visitou (aqui, endereços da rede de casa 192.168.0.x).</dd><dt>$4</dt><dd>data e hora, com o colchete na frente.</dd><dt>$6</dt><dd>o método, com aspas na frente: "GET ou "POST.</dd><dt>$7</dt><dd>o caminho pedido, como /index.html.</dd><dt>$9</dt><dd>o status da resposta: 200 deu certo, 404 não achou, 500 erro do servidor.</dd><dt>$10</dt><dd>quantos bytes foram enviados.</dd></dl>
+<hr>
+<h2>2. Contar por status</h2>
+<p>A receita clássica: <code>awk</code> tira a coluna, <code>sort</code> junta os iguais, <code>uniq -c</code> conta, e o último <code>sort -rn</code> põe os maiores no topo:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{print $9}' acesso.log | sort | uniq -c | sort -rn
+      6 200
+      2 500
+      2 403
+      1 404
+      1 304
+$</pre>
+<hr>
+<h2>3. Quem mais acessou</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{print $1}' acesso.log | sort | uniq -c | sort -rn | head -3
+      4 192.168.0.12
+      3 192.168.0.20
+      3 192.168.0.15
+$</pre>
+<p>Com empate (dois IPs com 3 visitas), o <code>sort -rn</code> desempata comparando a linha inteira, também em ordem decrescente: por isso o .20 veio antes do .15.</p>
+<hr>
+<h2>4. Só os erros</h2>
+<p>Status 400 ou mais é problema. No <code>awk</code>, um padrão numérico resolve; no <code>grep</code>, uma expressão regular que pega <code>" 5xx </code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '$9 &gt;= 400 {print $1, $7, $9}' acesso.log
+192.168.0.20 /pagar 500
+192.168.0.33 /admin 403
+192.168.0.20 /sobre.html 404
+192.168.0.33 /admin 403
+192.168.0.20 /pagar 500
+$ grep -c '&quot; 5[0-9][0-9] ' acesso.log
+2
+$</pre>
+<hr>
+<h2>5. Visitas a cada 10 minutos</h2>
+<p>O <code>sed</code> recorta da hora só “hora:dezena dos minutos” e completa com 0. Depois, contar é a mesma receita:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ sed -E 's/.*:([0-9]{2}):([0-9])[0-9]:.*/\1:\20/' acesso.log | sort | uniq -c
+      5 08:10
+      5 08:20
+      2 08:30
+$</pre>
+<dl class="anatomy"><dt>.*:</dt><dd>anda até o último “:” que ainda deixa o resto casar.</dd><dt>([0-9]{2}):([0-9])[0-9]:</dt><dd>guarda a hora (grupo 1) e a dezena dos minutos (grupo 2).</dd><dt>\1:\20</dt><dd>devolve hora, “:”, a dezena e um 0.</dd></dl>
+<hr>
+<h2>6. O outro log: <code>log.txt</code></h2>
+<p>O <code>log.txt</code> é o log do sistema da loja, com o nível na 3ª coluna:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{print $3}' log.txt | sort | uniq -c
+      2 AVISO
+      3 ERRO
+      5 INFO
+$</pre>
+<hr>
+<h2>7. Tudo num script</h2>
+<p>O arquivo <code>analisa-log.sh</code> (já está nos arquivos de exemplo) junta os passos. Ele confere se o arquivo existe antes de começar e aceita outro log como argumento:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cat analisa-log.sh
+#!/usr/bin/env bash
+# analisa-log.sh: resumo do acesso.log (projeto do Nível 5)
+arq=&quot;${1:-acesso.log}&quot;
+if [ ! -r &quot;$arq&quot; ]; then
+    echo &quot;analisa-log.sh: não consigo ler o arquivo $arq&quot; &gt;&amp;2
+    exit 1
+fi
+echo &quot;== Relatório de $arq ==&quot;
+echo &quot;Pedidos: $(wc -l &lt; &quot;$arq&quot;)&quot;
+echo
+echo &quot;-- Por status --&quot;
+awk '{n[$9]++} END {for (s in n) print s, n[s]}' &quot;$arq&quot; | sort
+echo
+echo &quot;-- IPs que mais acessaram --&quot;
+awk '{n[$1]++} END {for (ip in n) print n[ip], ip}' &quot;$arq&quot; | sort -rn | head -3
+echo
+echo &quot;-- Erros (4xx e 5xx) --&quot;
+awk '$9 &gt;= 400 {print $9, $6, $7}' &quot;$arq&quot; | tr -d '&quot;' | sort | uniq -c | sort -rn
+echo
+awk '{b += $10} END {printf &quot;Total enviado: %.1f KB\n&quot;, b / 1024}' &quot;$arq&quot;
+$ bash analisa-log.sh
+== Relatório de acesso.log ==
+Pedidos: 12
+
+-- Por status --
+200 6
+304 1
+403 2
+404 1
+500 2
+
+-- IPs que mais acessaram --
+4 192.168.0.12
+3 192.168.0.20
+3 192.168.0.15
+
+-- Erros (4xx e 5xx) --
+      2 500 POST /pagar
+      2 403 GET /admin
+      1 404 GET /sobre.html
+
+Total enviado: 29.9 KB
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>uniq sem sort</strong>
+<p>O <code>uniq</code> só junta linhas iguais <strong>vizinhas</strong>. Sem o <code>sort</code> antes, a contagem sai picada, e o 200 aparece várias vezes:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ awk '{print $9}' acesso.log | uniq -c | head -5
+      3 200
+      1 500
+      1 304
+      1 403
+      1 200
+$</pre>
+</div>
+<div class="cenario"><strong>Arquivo que não existe</strong>
+<p>O script testa o arquivo e para com uma mensagem clara (e código 1). Sem esse teste, cada <code>awk</code> do script reclamaria sozinho, como o segundo comando mostra:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ bash analisa-log.sh nada.log; echo &quot;código: $?&quot;
+analisa-log.sh: não consigo ler o arquivo nada.log
+código: 1
+$ awk '{print $9}' nada.log
+awk: fatal: não foi possível abrir arquivo &quot;nada.log&quot; para leitura: Arquivo ou diretório inexistente
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>awk '{print $9}' acesso.log</code></td><td>a coluna do status.</td></tr>
+<tr><td><code>… | sort | uniq -c | sort -rn</code></td><td>conta e ordena.</td></tr>
+<tr><td><code>awk '$9 &gt;= 400' acesso.log</code></td><td>só os erros.</td></tr>
+<tr><td><code>bash analisa-log.sh</code></td><td>o relatório completo.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. A coluna do status</h3><p>No <code>acesso.log</code>, qual campo do awk tem o status (200, 404…)?</p><div class="ex-code">awk '{print <input data-answer="$9" aria-label="campo">}' acesso.log</div></div><div class="exercise"><h3>2. Juntar antes de contar</h3><p>Complete a receita de contagem.</p><div class="ex-code">awk '{print $1}' acesso.log | <input data-answer="sort" aria-label="comando"> | uniq -c</div></div><div class="mc" data-answer="2"><p class="mc-q">3. Por que <code>uniq -c</code> precisa de <code>sort</code> antes?</p>
+<label><input type="radio" name="q3"> porque o uniq só lê arquivos ordenados, senão dá erro</label>
+<label><input type="radio" name="q3"> porque ele só junta linhas iguais que estão vizinhas</label>
+<label><input type="radio" name="q3"> porque o sort apaga as linhas vazias</label>
+<label><input type="radio" name="q3"> não precisa</label></div><div class="mc" data-answer="1"><p class="mc-q">4. Qual padrão do awk pega só as respostas de erro (4xx e 5xx)?</p>
+<label><input type="radio" name="q4"> <code>$9 >= 400</code></label>
+<label><input type="radio" name="q4"> <code>$9 == "erro"</code></label>
+<label><input type="radio" name="q4"> <code>/erro/</code></label>
+<label><input type="radio" name="q4"> <code>$1 >= 400</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:grep;;src:POST;;outre:^3$">
+<p class="try-task"><strong>Missão:</strong> conte quantas linhas do <code>acesso.log</code> são do método POST.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+grep -c POST acesso.log
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+3
+</pre>
+</div><div class="trycmd" data-goal="src:awk;;src:\$10;;outre:^30650$">
+<p class="try-task"><strong>Missão:</strong> some a coluna de bytes (<code>$10</code>) de todas as linhas com <code>awk</code>.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+awk '{s += $10} END {print s}' acesso.log
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+30650
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>Olhe o arquivo antes de escrever o comando.</li>
+<li><code>sort | uniq -c | sort -rn</code> é a receita de contagem.</li>
+<li>Um script deve conferir a entrada antes de começar.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

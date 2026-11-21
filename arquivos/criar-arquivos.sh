@@ -17,6 +17,28 @@ cat > acesso.log <<'FIM_DO_ARQUIVO'
 192.168.0.12 - - [02/Mar/2026:08:30:12 -0300] "GET /produtos.html HTTP/1.1" 200 8340
 192.168.0.20 - - [02/Mar/2026:08:31:48 -0300] "POST /pagar HTTP/1.1" 500 310
 FIM_DO_ARQUIVO
+cat > analisa-log.sh <<'FIM_DO_ARQUIVO'
+#!/usr/bin/env bash
+# analisa-log.sh: resumo do acesso.log (projeto do Nível 5)
+arq="${1:-acesso.log}"
+if [ ! -r "$arq" ]; then
+    echo "analisa-log.sh: não consigo ler o arquivo $arq" >&2
+    exit 1
+fi
+echo "== Relatório de $arq =="
+echo "Pedidos: $(wc -l < "$arq")"
+echo
+echo "-- Por status --"
+awk '{n[$9]++} END {for (s in n) print s, n[s]}' "$arq" | sort
+echo
+echo "-- IPs que mais acessaram --"
+awk '{n[$1]++} END {for (ip in n) print n[ip], ip}' "$arq" | sort -rn | head -3
+echo
+echo "-- Erros (4xx e 5xx) --"
+awk '$9 >= 400 {print $9, $6, $7}' "$arq" | tr -d '"' | sort | uniq -c | sort -rn
+echo
+awk '{b += $10} END {printf "Total enviado: %.1f KB\n", b / 1024}' "$arq"
+FIM_DO_ARQUIVO
 cat > config.txt <<'FIM_DO_ARQUIVO'
 # Configuração do site da loja
 nome=Loja da Ana
@@ -79,6 +101,28 @@ Carla 9.5 10.0 9.0
 Diego 4.0 6.5 5.0
 Eduarda 7.0 8.0 8.5
 FIM_DO_ARQUIVO
+cat > painel.sh <<'FIM_DO_ARQUIVO'
+#!/usr/bin/env bash
+# painel.sh: resumo dos arquivos da loja (projeto final do Nível 5)
+echo "== Painel da Papelaria =="
+echo "Erros no log do sistema: $(grep -c ERRO log.txt)"
+echo "Respostas 5xx no site:   $(awk '$9 >= 500' acesso.log | wc -l)"
+total=$(awk -F, 'NR > 1 {t += $4 * $5} END {printf "%.2f", t}' vendas.csv | tr . ,)
+echo "Vendas no CSV:           R\$ $total"
+echo "Pedidos pagos no JSON:   $(jq '[.pedidos[] | select(.status == "pago")] | length' pedidos.json)"
+echo "Pagamentos que falharam:"
+grep 'falha no pagamento' log.txt | sed -E 's/^([0-9-]+) ([0-9:]+).*pedido=([0-9]+)$/  \1 \2  pedido \3/'
+FIM_DO_ARQUIVO
+cat > pedidos-para-csv.sh <<'FIM_DO_ARQUIVO'
+#!/usr/bin/env bash
+# pedidos-para-csv.sh: uma linha de CSV por item de pedido (projeto do Nível 5)
+arq="${1:-pedidos.json}"
+jq -r '
+  ["pedido", "cliente", "status", "produto", "qtd", "preco", "subtotal"],
+  (.pedidos[] as $p | $p.itens[] |
+    [$p.id, $p.cliente, $p.status, .produto, .qtd, .preco, (.qtd * .preco)])
+  | @csv' "$arq"
+FIM_DO_ARQUIVO
 cat > pedidos.json <<'FIM_DO_ARQUIVO'
 {
   "loja": "Papelaria da Ana",
@@ -96,6 +140,28 @@ cat > produto.json <<'FIM_DO_ARQUIVO'
 FIM_DO_ARQUIVO
 cat > quebrado.json <<'FIM_DO_ARQUIVO'
 {"nome": "caderno", "preco": 12.5,
+FIM_DO_ARQUIVO
+cat > relatorio-vendas.sh <<'FIM_DO_ARQUIVO'
+#!/usr/bin/env bash
+# relatorio-vendas.sh: relatório do vendas.csv (projeto do Nível 5)
+arq="${1:-vendas.csv}"
+awk -F, '
+NR == 1 { next }
+{
+    total = $4 * $5
+    por_vendedor[$2] += total
+    por_dia[$1] += total
+    geral += total
+}
+END {
+    print "VENDAS POR VENDEDOR"
+    PROCINFO["sorted_in"] = "@val_num_desc"
+    for (v in por_vendedor) printf "  %-8s R$ %8.2f\n", v, por_vendedor[v]
+    print "VENDAS POR DIA"
+    PROCINFO["sorted_in"] = "@ind_str_asc"
+    for (d in por_dia) printf "  %s R$ %8.2f\n", d, por_dia[d]
+    printf "TOTAL GERAL      R$ %8.2f\n", geral
+}' "$arq" | sed 's/\([0-9]\)\.\([0-9][0-9]\)$/\1,\2/'
 FIM_DO_ARQUIVO
 cat > relatorio.awk <<'FIM_DO_ARQUIVO'
 # relatorio.awk: total vendido por vendedor (vendas.csv)

@@ -45,6 +45,7 @@ bash ~/Downloads/criar-arquivos.sh
 <pre class="term" data-cwd="~/guia-texto-teste">$ mkdir nova &amp;&amp; cd nova &amp;&amp; bash ../criar-arquivos.sh &amp;&amp; ls
 Arquivos de exemplo criados em /home/ana/guia-texto-teste/nova
 acesso.log
+analisa-log.sh
 config.txt
 contatos.txt
 frutas.txt
@@ -52,10 +53,13 @@ limpa.sed
 log.txt
 nomes.txt
 notas.txt
+painel.sh
 pedidos.json
+pedidos-para-csv.sh
 produto.json
 quebrado.json
 relatorio.awk
+relatorio-vendas.sh
 texto.txt
 usuarios.json
 vendas.csv
@@ -65,23 +69,27 @@ $</pre>
 <h2>2. Conhecendo os arquivos</h2>
 <p>O <code>wc -c *</code> mostra o tamanho de cada arquivo da pasta, em bytes, e o total no fim:</p>
 <pre class="term" data-cwd="~/guia-texto-teste">$ wc -c *
- 960 acesso.log
- 148 config.txt
- 178 contatos.txt
-5235 criar-arquivos.sh
-  47 frutas.txt
-  82 limpa.sed
- 508 log.txt
-  59 nomes.txt
-  91 notas.txt
- 646 pedidos.json
- 114 produto.json
-  35 quebrado.json
- 183 relatorio.awk
- 128 texto.txt
- 545 usuarios.json
- 421 vendas.csv
-9380 total
+  960 acesso.log
+  682 analisa-log.sh
+  148 config.txt
+  178 contatos.txt
+ 7725 criar-arquivos.sh
+   47 frutas.txt
+   82 limpa.sed
+  508 log.txt
+   59 nomes.txt
+   91 notas.txt
+  616 painel.sh
+  646 pedidos.json
+  337 pedidos-para-csv.sh
+  114 produto.json
+   35 quebrado.json
+  183 relatorio.awk
+  630 relatorio-vendas.sh
+  128 texto.txt
+  545 usuarios.json
+  421 vendas.csv
+14135 total
 $</pre>
 <p>Os principais, por tipo:</p>
 <div class="table-wrap"><table class="ref">
@@ -157,6 +165,7 @@ ls
 </pre>
 <pre class="saida-ok" data-file="comandos.sh" hidden>
 acesso.log
+analisa-log.sh
 config.txt
 contatos.txt
 criar-arquivos.sh
@@ -165,10 +174,13 @@ limpa.sed
 log.txt
 nomes.txt
 notas.txt
+painel.sh
 pedidos.json
+pedidos-para-csv.sh
 produto.json
 quebrado.json
 relatorio.awk
+relatorio-vendas.sh
 texto.txt
 usuarios.json
 vendas.csv

@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeto: converter JSON em CSV com jq e somar com awk | Guia Texto no Terminal</title>
+<meta name="description" content="Projeto prático: transformar pedidos.json em CSV com uma linha por item usando jq, tratar null e listas, e somar com awk.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Projeto: de <span class="hl">JSON</span> para planilha</h1>
+
+<p class="intro">Dados de API chegam em JSON; o financeiro quer planilha. Este projeto faz a ponte com o <code>jq</code> e confere o resultado com <code>awk</code>.</p>
+
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Uma linha de CSV por item, com <code>as $p</code>.</li>
+<li>Tratar <code>null</code> e listas na hora de exportar.</li>
+<li>Somar o CSV gerado com <code>awk</code>, sem cair nas aspas.</li>
+</ul></div>
+
+<p class="pasta-teste">Todas as saídas desta aula foram colhidas de verdade num Linux (Debian 13, com GNU Bash 5.2, GNU sed 4.9, GNU awk 5.2 e jq 1.7) em português (<code>pt_BR.UTF-8</code>), dentro da pasta de teste <code>~/guia-texto-teste</code> com os <a href="preparando.html">arquivos de exemplo</a>. Antes de cada caixa a pasta foi recriada do zero, então um comando que altera arquivo numa caixa não afeta a seguinte.</p>
+
+<hr>
+
+
+<h2>O problema</h2>
+<p>O sistema de pedidos exporta <code>pedidos.json</code>, mas o financeiro quer uma planilha: <em>uma linha por item, com o pedido, o cliente, o status e o subtotal.</em> Depois, ainda pedem o total só dos pedidos pagos.</p>
+<hr>
+<h2>1. Ver a forma do dado</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -c '.pedidos[0]' pedidos.json
+{&quot;id&quot;:1042,&quot;cliente&quot;:&quot;Bruno&quot;,&quot;status&quot;:&quot;pago&quot;,&quot;itens&quot;:[{&quot;produto&quot;:&quot;caderno&quot;,&quot;qtd&quot;:2,&quot;preco&quot;:12.5},{&quot;produto&quot;:&quot;caneta&quot;,&quot;qtd&quot;:5,&quot;preco&quot;:2.0}]}
+$</pre>
+<p>Cada pedido tem uma lista <code>itens</code>. Como uma linha do CSV é um item, o pedido (pai) precisa ser guardado numa variável com <code>as $p</code>.</p>
+<hr>
+<h2>2. O conversor</h2>
+<p>O <code>pedidos-para-csv.sh</code> escreve o cabeçalho e, para cada item, uma lista com os dados do pedido e do item, terminando em <code>@csv</code>:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ cat pedidos-para-csv.sh
+#!/usr/bin/env bash
+# pedidos-para-csv.sh: uma linha de CSV por item de pedido (projeto do Nível 5)
+arq=&quot;${1:-pedidos.json}&quot;
+jq -r '
+  [&quot;pedido&quot;, &quot;cliente&quot;, &quot;status&quot;, &quot;produto&quot;, &quot;qtd&quot;, &quot;preco&quot;, &quot;subtotal&quot;],
+  (.pedidos[] as $p | $p.itens[] |
+    [$p.id, $p.cliente, $p.status, .produto, .qtd, .preco, (.qtd * .preco)])
+  | @csv' &quot;$arq&quot;
+$ bash pedidos-para-csv.sh
+&quot;pedido&quot;,&quot;cliente&quot;,&quot;status&quot;,&quot;produto&quot;,&quot;qtd&quot;,&quot;preco&quot;,&quot;subtotal&quot;
+1042,&quot;Bruno&quot;,&quot;pago&quot;,&quot;caderno&quot;,2,12.5,25
+1042,&quot;Bruno&quot;,&quot;pago&quot;,&quot;caneta&quot;,5,2.0,10
+1043,&quot;Carla&quot;,&quot;pendente&quot;,&quot;mochila&quot;,1,89.9,89.9
+1044,&quot;Diego&quot;,&quot;pago&quot;,&quot;estojo&quot;,1,15.0,15
+1044,&quot;Diego&quot;,&quot;pago&quot;,&quot;caneta&quot;,3,2.0,6
+1045,&quot;Ana&quot;,&quot;cancelado&quot;,&quot;caderno&quot;,4,12.5,50
+$</pre>
+<dl class="anatomy"><dt>.pedidos[] as $p</dt><dd>para cada pedido, guarda o pedido em $p.</dd><dt>$p.itens[]</dt><dd>e passa por cada item dele.</dd><dt>(.qtd * .preco)</dt><dd>o subtotal, calculado na hora.</dd><dt>@csv</dt><dd>vira uma linha de CSV, com aspas nos textos.</dd></dl>
+<hr>
+<h2>3. Gravar e conferir</h2>
+<pre class="term" data-cwd="~/guia-texto-teste">$ bash pedidos-para-csv.sh &gt; itens.csv
+$ wc -l itens.csv
+7 itens.csv
+$ cut -d, -f4,7 itens.csv
+&quot;produto&quot;,&quot;subtotal&quot;
+&quot;caderno&quot;,25
+&quot;caneta&quot;,10
+&quot;mochila&quot;,89.9
+&quot;estojo&quot;,15
+&quot;caneta&quot;,6
+&quot;caderno&quot;,50
+$</pre>
+<hr>
+<h2>4. Somar os pagos com awk</h2>
+<p>O CSV do <code>@csv</code> tem aspas nos textos. Tire as aspas com <code>tr -d '"'</code> antes de comparar:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ bash pedidos-para-csv.sh | tr -d '&quot;' | awk -F, '$3 == &quot;pago&quot; {t += $7} END {print t + 0}'
+56
+$</pre>
+<p>Pedidos pagos: 1042 (25 + 10) e 1044 (15 + 6), total 56.</p>
+<hr>
+<h2>5. Campos nulos e listas</h2>
+<p>No <code>usuarios.json</code>, a Carla não tem e-mail e as tags são uma lista. O <code>//</code> troca o null por vazio e o <code>join</code> transforma a lista em texto:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ jq -r '.[] | [.nome, .email // &quot;&quot;, (.tags | join(&quot;;&quot;))] | @csv' usuarios.json
+&quot;Ana Souza&quot;,&quot;ana@exemplo.com&quot;,&quot;admin;vendas&quot;
+&quot;Bruno Lima&quot;,&quot;bruno@exemplo.com&quot;,&quot;vendas&quot;
+&quot;Carla Dias&quot;,&quot;&quot;,&quot;&quot;
+&quot;Diego Rocha&quot;,&quot;diego@exemplo.com&quot;,&quot;suporte&quot;
+$</pre>
+<hr>
+<h2 id="errado">Quando dá errado</h2>
+<div class="cenario"><strong>Comparar com as aspas lá dentro</strong>
+<p>O campo do status é <code>"pago"</code>, com aspas. Comparado com <code>pago</code>, nunca é igual, e o total dá 0:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ bash pedidos-para-csv.sh | awk -F, '$3 == &quot;pago&quot; {t += $7} END {print t + 0}'
+0
+$</pre>
+</div>
+<div class="cenario"><strong>Arquivo com outra forma</strong>
+<p>O <code>produto.json</code> não tem <code>.pedidos</code>: o jq recebe null e não consegue passar por ele (“Cannot iterate over null”: não dá para percorrer null). O cabeçalho ainda saiu, porque vem antes dos pedidos; a mensagem de erro apareceu primeiro porque a saída de erro não espera na fila:</p>
+<pre class="term" data-cwd="~/guia-texto-teste">$ bash pedidos-para-csv.sh produto.json
+jq: error (at produto.json:1): Cannot iterate over null (null)
+&quot;pedido&quot;,&quot;cliente&quot;,&quot;status&quot;,&quot;produto&quot;,&quot;qtd&quot;,&quot;preco&quot;,&quot;subtotal&quot;
+$</pre>
+</div>
+
+
+<hr>
+<h2>Referência rápida</h2>
+<div class="table-wrap"><table class="ref">
+<tr><th>Você digita</th><th>O que faz</th></tr>
+<tr><td><code>.pedidos[] as $p | $p.itens[]</code></td><td>item com o pedido à mão.</td></tr>
+<tr><td><code>[…] | @csv</code></td><td>uma linha CSV.</td></tr>
+<tr><td><code>.email // &quot;&quot;</code></td><td>null vira vazio.</td></tr>
+<tr><td><code>tr -d '&quot;'</code></td><td>tira as aspas antes do awk.</td></tr>
+</table></div>
+
+<hr>
+<h2>Exercícios</h2>
+<div class="exercise"><h3>1. Guardar o pai</h3><p>Complete para guardar cada pedido em <code>$p</code>.</p><div class="ex-code">jq '.pedidos[] <input data-answer="as $p" aria-label="trecho"> | $p.itens[] | .produto' pedidos.json</div></div><div class="exercise"><h3>2. Sem aspas</h3><p>Qual comando apaga as aspas do CSV antes do awk?</p><div class="ex-code">bash pedidos-para-csv.sh | <input data-answer="tr -d '&quot;'" aria-label="comando"> | awk -F, '{print $3}'</div></div><div class="mc" data-answer="2"><p class="mc-q">3. Por que <code>$3 == "pago"</code> no awk deu 0 no CSV do <code>@csv</code>?</p>
+<label><input type="radio" name="q3"> porque o awk não lê CSV</label>
+<label><input type="radio" name="q3"> porque o campo é <code>"pago"</code>, com as aspas</label>
+<label><input type="radio" name="q3"> porque o status está na coluna 2</label>
+<label><input type="radio" name="q3"> porque faltou o -r no jq</label></div><div class="mc" data-answer="1"><p class="mc-q">4. Para um campo null virar texto vazio no CSV:</p>
+<label><input type="radio" name="q4"> <code>.email // ""</code></label>
+<label><input type="radio" name="q4"> <code>.email | @csv</code></label>
+<label><input type="radio" name="q4"> <code>.email[]</code></label>
+<label><input type="radio" name="q4"> <code>del(.email)</code></label></div>
+
+<hr>
+<h2>Missões</h2>
+<p>Rode na sua pasta <code>~/guia-texto-teste</code> (com os arquivos de exemplo originais) e cole o que o terminal respondeu. O botão <strong>Conferir</strong> compara com o que a saída real precisa ter.</p>
+<div class="trycmd" data-goal="src:pedidos-para-csv;;src:wc -l;;outre:^7$">
+<p class="try-task"><strong>Missão:</strong> conte quantas linhas o <code>pedidos-para-csv.sh</code> escreve (cabeçalho incluído).</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+bash pedidos-para-csv.sh | wc -l
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+7
+</pre>
+</div><div class="trycmd" data-goal="src:@csv;;src:length;;out:1042,&quot;Bruno&quot;,2;;out:1045,&quot;Ana&quot;,1">
+<p class="try-task"><strong>Missão:</strong> faça um CSV com o id, o cliente e quantos itens cada pedido tem.</p>
+<pre class="script" data-file="comandos.sh">
+
+</pre>
+<pre class="solucao" data-file="comandos.sh">
+jq -r '.pedidos[] | [.id, .cliente, (.itens | length)] | @csv' pedidos.json
+</pre>
+<pre class="saida-ok" data-file="comandos.sh" hidden>
+1042,&quot;Bruno&quot;,2
+1043,&quot;Carla&quot;,1
+1044,&quot;Diego&quot;,2
+1045,&quot;Ana&quot;,1
+</pre>
+</div>
+
+<hr>
+<h2>Resumo</h2>
+<ul>
+<li>Pense em “uma linha é o quê?” antes de escrever o filtro.</li>
+<li><code>@csv</code> põe aspas nos textos: lembre disso no awk.</li>
+<li>Teste o conversor com um arquivo de outra forma.</li>
+</ul>
+
+<div class="pager"></div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>
